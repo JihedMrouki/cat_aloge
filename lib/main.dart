@@ -17,3 +17,26 @@ void main() async {
 
   runApp(ProviderScope(child: const CatGalleryApp()));
 }
+
+class CatGalleryApp extends ConsumerWidget {
+  const CatGalleryApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appRouter = ref.watch(appRouterProvider);
+
+    return ScreenUtilInit(
+      designSize: const Size(375, 812),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MaterialApp.router(
+          title: 'Cat Gallery',
+          theme: AppTheme.lightTheme,
+          routerConfig: appRouter,
+          debugShowCheckedModeBanner: false,
+        );
+      },
+    );
+  }
+}

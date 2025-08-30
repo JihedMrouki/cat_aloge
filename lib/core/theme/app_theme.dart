@@ -1,4 +1,5 @@
 import 'package:cat_aloge/core/theme/app_colors.dart';
+import 'package:cat_aloge/core/theme/text_styles.dart';
 import 'package:flutter/material.dart';
 
 class AppTheme {

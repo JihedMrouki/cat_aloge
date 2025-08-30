@@ -1,42 +1,38 @@
+import 'package:cat_aloge/core/theme/app_theme.dart';
+import 'package:cat_aloge/features/gallery/presentation/views/my_cat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:go_router/go_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive
-  await Hive.initFlutter();
-
-  // Register Hive Adapters
-  Hive.registerAdapter(FavoriteCatModelAdapter());
-
-  // Open Hive boxes
-  await Hive.openBox<FavoriteCatModel>(HiveBoxes.favorites);
-
-  runApp(ProviderScope(child: const CatGalleryApp()));
+  runApp(ProviderScope(child: CatGalleryApp()));
 }
 
-class CatGalleryApp extends ConsumerWidget {
+class CatGalleryApp extends StatelessWidget {
   const CatGalleryApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final appRouter = ref.watch(appRouterProvider);
-
-    return ScreenUtilInit(
-      designSize: const Size(375, 812),
-      minTextAdapt: true,
-      splitScreenMode: true,
-      builder: (context, child) {
-        return MaterialApp.router(
-          title: 'Cat Gallery',
-          theme: AppTheme.lightTheme,
-          routerConfig: appRouter,
-          debugShowCheckedModeBanner: false,
-        );
-      },
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      title: 'Cat Gallery',
+      theme: AppTheme.lightTheme,
+      routerConfig: _router,
     );
   }
 }
+
+// Simple GoRouter configuration
+final GoRouter _router = GoRouter(
+  initialLocation: '/',
+  routes: <RouteBase>[
+    GoRoute(
+      path: '/',
+      name: 'home',
+      builder: (BuildContext context, GoRouterState state) {
+        return const MyCatsScreen();
+      },
+    ),
+  ],
+);

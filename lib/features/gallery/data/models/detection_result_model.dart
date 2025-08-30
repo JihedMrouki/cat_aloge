@@ -1,57 +1,63 @@
-// import 'package:cat_aloge/features/gallery/domain/entities/detection_result.dart';
+import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
 
-// @JsonSerializable()
-// class DetectionResultModel extends DetectionResult {
-//   const DetectionResultModel({
-//     required super.hasCat,
-//     required super.confidence,
-//     required super.boundingBoxes,
-//     super.breed,
-//     super.features,
-//   });
+class DetectionResultModel extends DetectionResult {
+  const DetectionResultModel({
+    required super.confidence,
+    required super.hasCat,
+    required super.boundingBoxes,
+    super.breed,
+  });
 
-//   factory DetectionResultModel.fromJson(Map<String, dynamic> json) =>
-//       _$DetectionResultModelFromJson(json);
+  factory DetectionResultModel.fromJson(Map<String, dynamic> json) {
+    return DetectionResultModel(
+      confidence: (json['confidence'] as num).toDouble(),
+      hasCat: json['hasCat'] as bool,
+      boundingBoxes: (json['boundingBoxes'] as List<dynamic>)
+          .map((box) => BoundingBoxModel.fromJson(box))
+          .toList(),
+      breed: json['breed'] as String?,
+    );
+  }
 
-//   Map<String, dynamic> toJson() => _$DetectionResultModelToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'confidence': confidence,
+      'hasCat': hasCat,
+      'boundingBoxes': boundingBoxes
+          .map((box) => BoundingBoxModel.fromEntity(box).toJson())
+          .toList(),
+      'breed': breed,
+    };
+  }
+}
 
-//   factory DetectionResultModel.fromEntity(DetectionResult entity) {
-//     return DetectionResultModel(
-//       hasCat: entity.hasCat,
-//       confidence: entity.confidence,
-//       boundingBoxes: entity.boundingBoxes,
-//       breed: entity.breed,
-//       features: entity.features,
-//     );
-//   }
-// }
+class BoundingBoxModel extends BoundingBox {
+  const BoundingBoxModel({
+    required super.x,
+    required super.y,
+    required super.width,
+    required super.height,
+  });
 
-// @JsonSerializable()
-// class BoundingBoxModel extends BoundingBox {
-//   const BoundingBoxModel({
-//     required super.x,
-//     required super.y,
-//     required super.width,
-//     required super.height,
-//     required super.confidence,
-//   });
+  factory BoundingBoxModel.fromJson(Map<String, dynamic> json) {
+    return BoundingBoxModel(
+      x: (json['x'] as num).toDouble(),
+      y: (json['y'] as num).toDouble(),
+      width: (json['width'] as num).toDouble(),
+      height: (json['height'] as num).toDouble(),
+    );
+  }
 
-//   factory BoundingBoxModel.fromJson(Map<String, dynamic> json) =>
-//       _$BoundingBoxModelFromJson(json);
+  Map<String, dynamic> toJson() {
+    return {'x': x, 'y': y, 'width': width, 'height': height};
+  }
 
-//   Map<String, dynamic> toJson() => _$BoundingBoxModelToJson(this);
-// }
-
-// @JsonSerializable()
-// class CatBreedModel extends CatBreed {
-//   const CatBreedModel({
-//     required super.name,
-//     required super.confidence,
-//     required super.description,
-//   });
-
-//   factory CatBreedModel.fromJson(Map<String, dynamic> json) =>
-//       _$CatBreedModelFromJson(json);
-
-//   Map<String, dynamic> toJson() => _$CatBreedModelToJson(this);
-// }
+  factory BoundingBoxModel.fromEntity(BoundingBox entity) {
+    return BoundingBoxModel(
+      x: entity.x,
+      y: entity.y,
+      width: entity.width,
+      height: entity.height,
+    );
+  }
+}

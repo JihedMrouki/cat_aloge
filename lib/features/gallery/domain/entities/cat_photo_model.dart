@@ -1,4 +1,5 @@
-// lib/features/gallery/domain/entities/cat_photo.dart
+import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
+
 class CatPhotoModel extends CatPhoto {
   const CatPhotoModel({
     required super.id,

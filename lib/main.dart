@@ -16,6 +16,7 @@ class CatGalleryApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: 'Cat Gallery',
       theme: AppTheme.lightTheme,
       routerConfig: _router,

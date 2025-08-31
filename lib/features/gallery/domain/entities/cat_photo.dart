@@ -1,66 +1,24 @@
 // lib/features/gallery/domain/entities/cat_photo.dart
-class CatPhotoModel extends CatPhoto {
-  const CatPhotoModel({
-    required super.id,
-    required super.url,
-    required super.path,
-    required super.confidence,
-    required super.isFavorite,
-    required super.createdAt,
-    super.modifiedAt,
+class CatPhoto {
+  final String id;
+  final String url;
+  final String path;
+  final double confidence;
+  final bool isFavorite;
+  final DateTime createdAt;
+  final DateTime? modifiedAt;
+
+  const CatPhoto({
+    required this.id,
+    required this.url,
+    required this.path,
+    required this.confidence,
+    required this.isFavorite,
+    required this.createdAt,
+    this.modifiedAt,
   });
 
-  factory CatPhotoModel.fromJson(Map<String, dynamic> json) {
-    return CatPhotoModel(
-      id: json['id'] as String,
-      url: json['url'] as String,
-      path: json['path'] as String,
-      confidence: (json['confidence'] as num).toDouble(),
-      isFavorite: json['isFavorite'] as bool,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      modifiedAt: json['modifiedAt'] != null
-          ? DateTime.parse(json['modifiedAt'] as String)
-          : null,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'url': url,
-      'path': path,
-      'confidence': confidence,
-      'isFavorite': isFavorite,
-      'createdAt': createdAt.toIso8601String(),
-      'modifiedAt': modifiedAt?.toIso8601String(),
-    };
-  }
-
-  factory CatPhotoModel.fromEntity(CatPhoto entity) {
-    return CatPhotoModel(
-      id: entity.id,
-      url: entity.url,
-      path: entity.path,
-      confidence: entity.confidence,
-      isFavorite: entity.isFavorite,
-      createdAt: entity.createdAt,
-      modifiedAt: entity.modifiedAt,
-    );
-  }
-
-  CatPhoto toEntity() {
-    return CatPhoto(
-      id: id,
-      url: url,
-      path: path,
-      confidence: confidence,
-      isFavorite: isFavorite,
-      createdAt: createdAt,
-      modifiedAt: modifiedAt,
-    );
-  }
-
-  CatPhotoModel copyWith({
+  CatPhoto copyWith({
     String? id,
     String? url,
     String? path,
@@ -69,7 +27,7 @@ class CatPhotoModel extends CatPhoto {
     DateTime? createdAt,
     DateTime? modifiedAt,
   }) {
-    return CatPhotoModel(
+    return CatPhoto(
       id: id ?? this.id,
       url: url ?? this.url,
       path: path ?? this.path,
@@ -78,5 +36,57 @@ class CatPhotoModel extends CatPhoto {
       createdAt: createdAt ?? this.createdAt,
       modifiedAt: modifiedAt ?? this.modifiedAt,
     );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CatPhoto && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() {
+    return 'CatPhoto(id: $id, confidence: $confidence, isFavorite: $isFavorite)';
+  }
+}
+
+// lib/features/gallery/domain/entities/detection_result.dart
+class DetectionResult {
+  final double confidence;
+  final bool hasCat;
+  final List<BoundingBox> boundingBoxes;
+  final String? breed;
+
+  const DetectionResult({
+    required this.confidence,
+    required this.hasCat,
+    required this.boundingBoxes,
+    this.breed,
+  });
+
+  @override
+  String toString() {
+    return 'DetectionResult(confidence: $confidence, hasCat: $hasCat, boxes: ${boundingBoxes.length})';
+  }
+}
+
+class BoundingBox {
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+
+  const BoundingBox({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  @override
+  String toString() {
+    return 'BoundingBox(x: $x, y: $y, w: $width, h: $height)';
   }
 }

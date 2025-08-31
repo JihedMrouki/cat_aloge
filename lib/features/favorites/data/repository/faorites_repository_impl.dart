@@ -1,64 +1,60 @@
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import '../../domain/entities/favorite_cat.dart';
-// import '../../domain/repositories/favorites_repository.dart';
-// import '../datasources/local_favorites_datasource.dart';
-// import '../models/favorite_cat_model.dart';
-// import '../../../../core/errors/exceptions.dart';
+import 'package:cat_aloge/features/favorites/data/datasources/local_favorites_datasource.dart';
+import 'package:cat_aloge/features/favorites/domain/repositories/favorites_repository.dart';
+import 'package:cat_aloge/features/gallery/data/datasources/mock_photo_datasource.dart';
+import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
 
-// class FavoritesRepositoryImpl implements FavoritesRepository {
-//   final LocalFavoritesDataSource _localDataSource;
+class FavoritesRepositoryImpl implements FavoritesRepository {
+  final FavoritesDataSource _favoritesDataSource;
+  final PhotoDataSource _photoDataSource;
 
-//   FavoritesRepositoryImpl(this._localDataSource);
+  const FavoritesRepositoryImpl(
+    this._favoritesDataSource,
+    this._photoDataSource,
+  );
 
-//   @override
-//   Future<List<FavoriteCat>> getFavorites() async {
-//     try {
-//       final favoriteModels = await _localDataSource.getFavorites();
-//       return favoriteModels.map((model) => model.toEntity()).toList();
-//     } catch (e) {
-//       throw StorageException('Failed to get favorites: $e');
-//     }
-//   }
+  @override
+  Future<List<CatPhoto>> getFavoritePhotos() async {
+    final allPhotos = await _photoDataSource.getPhotos();
+    final favoriteIds = await _favoritesDataSource.getFavoriteIds();
+    final favoriteIdsSet = Set<String>.from(favoriteIds);
 
-//   @override
-//   Future<void> addToFavorites(FavoriteCat favoriteCat) async {
-//     try {
-//       final model = FavoriteCatModel.fromEntity(favoriteCat);
-//       await _localDataSource.addFavorite(model);
-//     } catch (e) {
-//       throw StorageException('Failed to add to favorites: $e');
-//     }
-//   }
+    return allPhotos
+        .where((photo) => favoriteIdsSet.contains(photo.id))
+        .map((photoModel) => photoModel.copyWith(isFavorite: true).toEntity())
+        .toList();
+  }
 
-//   @override
-//   Future<void> removeFromFavorites(String catPhotoId) async {
-//     try {
-//       await _localDataSource.removeFavorite(catPhotoId);
-//     } catch (e) {
-//       throw StorageException('Failed to remove from favorites: $e');
-//     }
-//   }
+  @override
+  Future<void> addToFavorites(String photoId) async {
+    await _favoritesDataSource.addFavorite(photoId);
+  }
 
-//   @override
-//   Future<bool> isFavorite(String catPhotoId) async {
-//     try {
-//       return await _localDataSource.isFavorite(catPhotoId);
-//     } catch (e) {
-//       throw StorageException('Failed to check favorite status: $e');
-//     }
-//   }
+  @override
+  Future<void> removeFromFavorites(String photoId) async {
+    await _favoritesDataSource.removeFavorite(photoId);
+  }
 
-//   @override
-//   Future<void> clearFavorites() async {
-//     try {
-//       await _localDataSource.clearFavorites();
-//     } catch (e) {
-//       throw StorageException('Failed to clear favorites: $e');
-//     }
-//   }
-// }
+  @override
+  Future<bool> isFavorite(String photoId) async {
+    return await _favoritesDataSource.isFavorite(photoId);
+  }
 
-// final favoritesRepositoryProvider = Provider<FavoritesRepository>((ref) {
-//   final localDataSource = ref.read(localFavoritesDataSourceProvider);
-//   return FavoritesRepositoryImpl(localDataSource);
-// });
+  @override
+  Future<bool> toggleFavorite(String photoId) async {
+    final currentlyFavorite = await _favoritesDataSource.isFavorite(photoId);
+
+    if (currentlyFavorite) {
+      await _favoritesDataSource.removeFavorite(photoId);
+      return false;
+    } else {
+      await _favoritesDataSource.addFavorite(photoId);
+      return true;
+    }
+  }
+
+  @override
+  Future<int> getFavoritesCount() async {
+    final favoriteIds = await _favoritesDataSource.getFavoriteIds();
+    return favoriteIds.length;
+  }
+}

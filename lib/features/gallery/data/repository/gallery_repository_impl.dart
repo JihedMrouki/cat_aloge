@@ -1,85 +1,62 @@
-// import 'package:cat_aloge/features/gallery/domain/repository/gallery_repository.dart';
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:uuid/uuid.dart';
-// import 'package:path/path.dart' as path;
+import 'package:cat_aloge/features/favorites/data/datasources/local_favorites_datasource.dart';
+import 'package:cat_aloge/features/gallery/data/datasources/mock_photo_datasource.dart';
+import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
+import 'package:cat_aloge/features/gallery/domain/repository/gallery_repository.dart';
 
-// import '../../domain/entities/cat_photo.dart';
-// import '../../domain/entities/detection_result.dart';
+class GalleryRepositoryImpl implements GalleryRepository {
+  final PhotoDataSource _photoDataSource;
+  final FavoritesDataSource _favoritesDataSource;
 
-// import '../datasources/local_photo_datasource.dart';
-// import '../datasources/ml_detection_datasource.dart';
-// import '../../../../core/errors/exceptions.dart';
+  const GalleryRepositoryImpl(this._photoDataSource, this._favoritesDataSource);
 
-// class GalleryRepositoryImpl implements GalleryRepository {
-//   final LocalPhotoDataSource _localDataSource;
-//   final MlDetectionDataSource _mlDataSource;
-//   final Uuid _uuid = const Uuid();
+  @override
+  Future<List<CatPhoto>> getCatPhotos() async {
+    final photos = await _photoDataSource.getPhotos();
+    final favoriteIds = await _favoritesDataSource.getFavoriteIds();
+    final favoriteIdsSet = Set<String>.from(favoriteIds);
 
-//   GalleryRepositoryImpl(this._localDataSource, this._mlDataSource);
+    // Map to domain entities and update favorite status
+    return photos.map((photoModel) {
+      return photoModel
+          .copyWith(isFavorite: favoriteIdsSet.contains(photoModel.id))
+          .toEntity();
+    }).toList();
+  }
 
-//   @override
-//   Future<List<CatPhoto>> getCatPhotos() async {
-//     try {
-//       final assets = await _localDataSource.getLocalPhotos();
-//       final catPhotos = <CatPhoto>[];
+  @override
+  Future<DetectionResult> detectCatsInPhoto(String photoPath) async {
+    final result = await _photoDataSource.detectCat(photoPath);
+    return DetectionResult(
+      confidence: result.confidence,
+      hasCat: result.hasCat,
+      boundingBoxes: result.boundingBoxes,
+      breed: result.breed,
+    );
+  }
 
-//       for (final asset in assets) {
-//         final file = await asset.file;
-//         if (file == null) continue;
+  @override
+  Future<List<CatPhoto>> refreshPhotos() async {
+    final photos = await _photoDataSource.refreshPhotos();
+    final favoriteIds = await _favoritesDataSource.getFavoriteIds();
+    final favoriteIdsSet = Set<String>.from(favoriteIds);
 
-//         final detectionResult = await _mlDataSource.detectCats(file.path);
+    return photos.map((photoModel) {
+      return photoModel
+          .copyWith(isFavorite: favoriteIdsSet.contains(photoModel.id))
+          .toEntity();
+    }).toList();
+  }
 
-//         if (detectionResult.hasCat) {
-//           final catPhoto = CatPhoto(
-//             id: _uuid.v4(),
-//             path: file.path,
-//             name: _generateCatName(file.path),
-//             dateAdded: asset.createDateTime,
-//             detectionResult: detectionResult,
-//             metadata: PhotoMetadata(
-//               width: asset.width,
-//               height: asset.height,
-//               fileSize: await asset.size,
-//               dateTaken: asset.createDateTime,
-//             ),
-//           );
-//           catPhotos.add(catPhoto);
-//         }
-//       }
+  @override
+  Future<List<CatPhoto>> getPhotosPage({int page = 0, int limit = 20}) async {
+    final allPhotos = await getCatPhotos();
+    final startIndex = page * limit;
+    final endIndex = (startIndex + limit).clamp(0, allPhotos.length);
 
-//       return catPhotos;
-//     } catch (e) {
-//       throw CacheException('Failed to get cat photos: $e');
-//     }
-//   }
+    if (startIndex >= allPhotos.length) {
+      return [];
+    }
 
-//   @override
-//   Future<List<CatPhoto>> refreshCatPhotos() async {
-//     return await getCatPhotos();
-//   }
-
-//   @override
-//   Future<DetectionResult> detectCatsInPhoto(String imagePath) async {
-//     try {
-//       return await _mlDataSource.detectCats(imagePath);
-//     } catch (e) {
-//       throw MLModelException('Failed to detect cats: $e');
-//     }
-//   }
-
-//   @override
-//   Future<void> clearCache() async {
-//     // Implement cache clearing logic if needed
-//   }
-
-//   String _generateCatName(String filePath) {
-//     final fileName = path.basenameWithoutExtension(filePath);
-//     return 'Cat from $fileName';
-//   }
-// }
-
-// final galleryRepositoryProvider = Provider<GalleryRepository>((ref) {
-//   final localDataSource = ref.read(localPhotoDataSourceProvider);
-//   final mlDataSource = ref.read(mlDetectionDataSourceProvider);
-//   return GalleryRepositoryImpl(localDataSource, mlDataSource);
-// });
+    return allPhotos.sublist(startIndex, endIndex);
+  }
+}

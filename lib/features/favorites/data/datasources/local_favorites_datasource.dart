@@ -5,6 +5,7 @@ abstract class FavoritesDataSource {
   Future<void> addFavorite(String photoId);
   Future<void> removeFavorite(String photoId);
   Future<bool> isFavorite(String photoId);
+  Future<void> initialize();
 }
 
 class LocalFavoritesDataSource implements FavoritesDataSource {
@@ -50,5 +51,11 @@ class LocalFavoritesDataSource implements FavoritesDataSource {
   // Method to clear all favorites (useful for testing)
   Future<void> clearAll() async {
     _favorites.clear();
+  }
+
+  @override
+  Future<void> initialize() {
+    // TODO: implement initialize
+    throw UnimplementedError();
   }
 }

@@ -1,3 +1,4 @@
+import 'package:cat_aloge/features/favorites/data/datasources/hive_favorites_datasource.dart';
 import 'package:cat_aloge/features/favorites/data/datasources/local_favorites_datasource.dart';
 import 'package:cat_aloge/features/gallery/data/datasources/mock_photo_datasource.dart';
 import 'package:cat_aloge/features/gallery/data/repository/gallery_repository_impl.dart';
@@ -7,12 +8,19 @@ import 'package:cat_aloge/features/gallery/domain/usecases/get_cat_photos.dart';
 import 'package:cat_aloge/features/gallery/domain/usecases/refresh_gallery.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+// Data Source Providers
 final photoDataSourceProvider = Provider<PhotoDataSource>((ref) {
   return MockPhotoDataSource();
 });
 
 final favoritesDataSourceProvider = Provider<FavoritesDataSource>((ref) {
-  return LocalFavoritesDataSource();
+  return HiveFavoritesDataSource();
+});
+
+// Initialization Provider - ensures Hive is initialized
+final appInitializationProvider = FutureProvider<void>((ref) async {
+  final favoritesDataSource = ref.read(favoritesDataSourceProvider);
+  await favoritesDataSource.initialize();
 });
 
 // Repository Providers
@@ -89,6 +97,19 @@ final isPhotoFavoriteProvider = Provider.family<bool, String>((ref, photoId) {
   return photo?.isFavorite ?? false;
 });
 
+// Favorites-specific providers
+final favoritesStatsProvider = FutureProvider<Map<String, int>>((ref) async {
+  final favoritesDataSource = ref.watch(favoritesDataSourceProvider);
+  if (favoritesDataSource is HiveFavoritesDataSource) {
+    final count = await favoritesDataSource.getFavoritesCount();
+    return {
+      'total': count,
+      'thisMonth': 0, // Can be enhanced later
+    };
+  }
+  return {'total': 0, 'thisMonth': 0};
+});
+
 // Gallery Notifier Class
 class GalleryNotifier extends StateNotifier<AsyncValue<List<CatPhoto>>> {
   final GetCatPhotos _getCatPhotos;
@@ -124,12 +145,31 @@ class GalleryNotifier extends StateNotifier<AsyncValue<List<CatPhoto>>> {
     final currentPhotos = state.valueOrNull ?? [];
 
     try {
-      // Toggle in data source
-      final newFavoriteStatus =
-          await (_favoritesDataSource as LocalFavoritesDataSource)
-              .toggleFavorite(photoId);
+      // Toggle in persistent storage
+      bool newFavoriteStatus;
+      if (_favoritesDataSource is HiveFavoritesDataSource) {
+        newFavoriteStatus =
+            await (_favoritesDataSource as HiveFavoritesDataSource)
+                .toggleFavorite(photoId);
+      } else if (_favoritesDataSource is InMemoryFavoritesDataSource) {
+        newFavoriteStatus =
+            await (_favoritesDataSource as InMemoryFavoritesDataSource)
+                .toggleFavorite(photoId);
+      } else {
+        // Fallback toggle logic
+        final isCurrentlyFavorite = await _favoritesDataSource.isFavorite(
+          photoId,
+        );
+        if (isCurrentlyFavorite) {
+          await _favoritesDataSource.removeFavorite(photoId);
+          newFavoriteStatus = false;
+        } else {
+          await _favoritesDataSource.addFavorite(photoId);
+          newFavoriteStatus = true;
+        }
+      }
 
-      // Update local state
+      // Update local state immediately for responsive UI
       final updatedPhotos = currentPhotos.map((photo) {
         if (photo.id == photoId) {
           return photo.copyWith(isFavorite: newFavoriteStatus);
@@ -141,6 +181,85 @@ class GalleryNotifier extends StateNotifier<AsyncValue<List<CatPhoto>>> {
     } catch (error, stackTrace) {
       // Handle error but don't break the UI
       print('Error toggling favorite: $error');
+      // Optionally show error to user or retry
+    }
+  }
+
+  Future<void> clearAllFavorites() async {
+    try {
+      if (_favoritesDataSource is HiveFavoritesDataSource) {
+        await (_favoritesDataSource as HiveFavoritesDataSource)
+            .clearAllFavorites();
+      } else if (_favoritesDataSource is InMemoryFavoritesDataSource) {
+        // Clear in-memory favorites
+        final currentFavorites = await _favoritesDataSource.getFavoriteIds();
+        for (final photoId in currentFavorites) {
+          await _favoritesDataSource.removeFavorite(photoId);
+        }
+      }
+
+      // Update local state - set all photos to not favorite
+      final currentPhotos = state.valueOrNull ?? [];
+      final updatedPhotos = currentPhotos.map((photo) {
+        return photo.copyWith(isFavorite: false);
+      }).toList();
+
+      state = AsyncValue.data(updatedPhotos);
+    } catch (error, stackTrace) {
+      print('Error clearing favorites: $error');
+      // Don't throw error to UI, just log it
+    }
+  }
+
+  // Get favorites export data
+  Future<Map<String, dynamic>> exportFavorites() async {
+    try {
+      if (_favoritesDataSource is HiveFavoritesDataSource) {
+        return await (_favoritesDataSource as HiveFavoritesDataSource)
+            .exportFavorites();
+      }
+      return {};
+    } catch (error) {
+      print('Error exporting favorites: $error');
+      return {};
+    }
+  }
+
+  // Import favorites from backup
+  Future<void> importFavorites(List<String> favoriteIds) async {
+    try {
+      if (_favoritesDataSource is HiveFavoritesDataSource) {
+        await (_favoritesDataSource as HiveFavoritesDataSource).importFavorites(
+          favoriteIds,
+        );
+
+        // Refresh photos to update favorite status
+        await loadPhotos();
+      }
+    } catch (error, stackTrace) {
+      print('Error importing favorites: $error');
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
+
+  // Get statistics
+  Future<Map<String, dynamic>> getGalleryStats() async {
+    try {
+      final currentPhotos = state.valueOrNull ?? [];
+      final favoritePhotos = currentPhotos.where((p) => p.isFavorite).toList();
+
+      return {
+        'totalPhotos': currentPhotos.length,
+        'favoritePhotos': favoritePhotos.length,
+        'averageConfidence': currentPhotos.isNotEmpty
+            ? currentPhotos.map((p) => p.confidence).reduce((a, b) => a + b) /
+                  currentPhotos.length
+            : 0.0,
+        'lastUpdated': DateTime.now().toIso8601String(),
+      };
+    } catch (error) {
+      print('Error getting gallery stats: $error');
+      return {};
     }
   }
 }

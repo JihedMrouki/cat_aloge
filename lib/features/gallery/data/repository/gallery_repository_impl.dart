@@ -1,62 +1,77 @@
-import 'package:cat_aloge/features/favorites/data/datasources/local_favorites_datasource.dart';
-import 'package:cat_aloge/features/gallery/data/datasources/mock_photo_datasource.dart';
+import 'package:cat_aloge/core/utils/logger.dart';
+import 'package:cat_aloge/features/gallery/data/datasources/local_photo_datasource.dart';
+import 'package:cat_aloge/features/gallery/data/datasources/ml_detection_datasource.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
-import 'package:cat_aloge/features/gallery/domain/repository/gallery_repository.dart';
+import 'package:cat_aloge/features/gallery/domain/entities/detection_result.dart';
 
 class GalleryRepositoryImpl implements GalleryRepository {
-  final PhotoDataSource _photoDataSource;
-  final FavoritesDataSource _favoritesDataSource;
+  final LocalPhotoDataSource _localDataSource;
+  final MlDetectionDataSource _mlDataSource;
 
-  const GalleryRepositoryImpl(this._photoDataSource, this._favoritesDataSource);
+  GalleryRepositoryImpl(this._localDataSource, this._mlDataSource);
 
   @override
   Future<List<CatPhoto>> getCatPhotos() async {
-    final photos = await _photoDataSource.getPhotos();
-    final favoriteIds = await _favoritesDataSource.getFavoriteIds();
-    final favoriteIdsSet = Set<String>.from(favoriteIds);
+    try {
+      AppLogger.info('Repository: Getting cat photos...');
 
-    // Map to domain entities and update favorite status
-    return photos.map((photoModel) {
-      return photoModel
-          .copyWith(isFavorite: favoriteIdsSet.contains(photoModel.id))
-          .toEntity();
-    }).toList();
-  }
+      final catPhotos = await _localDataSource.getCatPhotos();
 
-  @override
-  Future<DetectionResult> detectCatsInPhoto(String photoPath) async {
-    final result = await _photoDataSource.detectCat(photoPath);
-    return DetectionResult(
-      confidence: result.confidence,
-      hasCat: result.hasCat,
-      boundingBoxes: result.boundingBoxes,
-      breed: result.breed,
-    );
-  }
+      // Sort by detection confidence and date
+      catPhotos.sort((a, b) {
+        // First sort by confidence (higher confidence first)
+        final confidenceCompare = (b.detectionResult?.confidence ?? 0.0)
+            .compareTo(a.detectionResult?.confidence ?? 0.0);
 
-  @override
-  Future<List<CatPhoto>> refreshPhotos() async {
-    final photos = await _photoDataSource.refreshPhotos();
-    final favoriteIds = await _favoritesDataSource.getFavoriteIds();
-    final favoriteIdsSet = Set<String>.from(favoriteIds);
+        if (confidenceCompare != 0) return confidenceCompare;
 
-    return photos.map((photoModel) {
-      return photoModel
-          .copyWith(isFavorite: favoriteIdsSet.contains(photoModel.id))
-          .toEntity();
-    }).toList();
-  }
+        // Then sort by date (newer first)
+        return b.dateAdded.compareTo(a.dateAdded);
+      });
 
-  @override
-  Future<List<CatPhoto>> getPhotosPage({int page = 0, int limit = 20}) async {
-    final allPhotos = await getCatPhotos();
-    final startIndex = page * limit;
-    final endIndex = (startIndex + limit).clamp(0, allPhotos.length);
-
-    if (startIndex >= allPhotos.length) {
-      return [];
+      AppLogger.info('Repository: Returning ${catPhotos.length} cat photos');
+      return catPhotos;
+    } catch (e, stackTrace) {
+      AppLogger.error('Repository error getting cat photos', e, stackTrace);
+      rethrow;
     }
+  }
 
-    return allPhotos.sublist(startIndex, endIndex);
+  @override
+  Future<void> refreshGallery() async {
+    try {
+      AppLogger.info('Repository: Refreshing gallery...');
+      await _localDataSource.refreshPhotos();
+      AppLogger.info('Repository: Gallery refresh complete');
+    } catch (e, stackTrace) {
+      AppLogger.error('Repository error refreshing gallery', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<DetectionResult> detectCatInPhoto(String photoPath) async {
+    try {
+      return await _mlDataSource.detectCatInPhoto(photoPath);
+    } catch (e, stackTrace) {
+      AppLogger.error('Repository error detecting cat in photo', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> clearCache() async {
+    try {
+      AppLogger.info('Repository: Clearing cache...');
+      await _localDataSource.clearCache();
+    } catch (e, stackTrace) {
+      AppLogger.error('Repository error clearing cache', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  void dispose() {
+    AppLogger.info('Disposing gallery repository');
+    _localDataSource.dispose();
   }
 }

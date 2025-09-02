@@ -7,6 +7,7 @@ class CatPhoto {
   final bool isFavorite;
   final DateTime createdAt;
   final DateTime? modifiedAt;
+  final DetectionResult? detectionResult;
 
   const CatPhoto({
     required this.id,
@@ -16,6 +17,7 @@ class CatPhoto {
     required this.isFavorite,
     required this.createdAt,
     this.modifiedAt,
+    this.detectionResult,
   });
 
   CatPhoto copyWith({
@@ -26,6 +28,7 @@ class CatPhoto {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? modifiedAt,
+    DetectionResult? detectionResult,
   }) {
     return CatPhoto(
       id: id ?? this.id,
@@ -35,6 +38,7 @@ class CatPhoto {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       modifiedAt: modifiedAt ?? this.modifiedAt,
+      detectionResult: detectionResult ?? this.detectionResult,
     );
   }
 
@@ -48,11 +52,15 @@ class CatPhoto {
 
   @override
   String toString() {
-    return 'CatPhoto(id: $id, confidence: $confidence, isFavorite: $isFavorite)';
+    return 'CatPhoto(id: $id, confidence: $confidence, isFavorite: $isFavorite, url: $url)';
   }
+
+  // Helper getter for backwards compatibility
+  String get name => 'Cat ${id.substring(0, 6)}';
+  DateTime get dateAdded => createdAt;
 }
 
-// lib/features/gallery/domain/entities/detection_result.dart
+// Detection Result Classes
 class DetectionResult {
   final double confidence;
   final bool hasCat;

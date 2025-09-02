@@ -9,6 +9,13 @@ import 'package:cat_aloge/features/gallery/presentation/widgets/photo_grid_view.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+// lib/features/gallery/presentation/views/my_cat_screen.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../providers/gallery_providers.dart';
+import '../../domain/entities/cat_photo.dart';
+
 class MyCatsScreen extends ConsumerStatefulWidget {
   const MyCatsScreen({super.key});
 
@@ -20,7 +27,6 @@ class _MyCatsScreenState extends ConsumerState<MyCatsScreen> {
   @override
   void initState() {
     super.initState();
-    AppLogger.info('MyCats screen initialized');
     // Auto-load photos when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(galleryProvider.notifier).loadPhotos();
@@ -49,13 +55,15 @@ class _MyCatsScreenState extends ConsumerState<MyCatsScreen> {
                 children: [
                   Text(
                     '$photoCount',
-                    style: context.textTheme.labelMedium?.copyWith(
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
                     'photos',
-                    style: context.textTheme.labelSmall?.copyWith(fontSize: 9),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(fontSize: 9),
                   ),
                 ],
               ),
@@ -71,14 +79,14 @@ class _MyCatsScreenState extends ConsumerState<MyCatsScreen> {
                 children: [
                   Text(
                     '$favoriteCount',
-                    style: context.textTheme.labelMedium?.copyWith(
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.red,
                     ),
                   ),
                   Text(
                     'favorites',
-                    style: context.textTheme.labelSmall?.copyWith(
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       fontSize: 9,
                       color: Colors.red,
                     ),
@@ -100,99 +108,229 @@ class _MyCatsScreenState extends ConsumerState<MyCatsScreen> {
   }
 
   Widget _buildBody() {
-    final galleryState = ref.watch(galleryProvider);
-    final isLoading = ref.watch(isLoadingProvider);
-    final hasError = ref.watch(hasErrorProvider);
-    final errorMessage = ref.watch(errorMessageProvider);
-    final photos = ref.watch(photosProvider);
+    final asyncPhotos = ref.watch(galleryProvider);
 
-    // Loading state
-    if (isLoading && !galleryState.isRefreshing) {
-      return const LoadingWidget(message: AppConstants.loadingPhotos);
-    }
-
-    // Error state
-    if (hasError) {
-      return CustomErrorWidget(
-        title: 'Oops!',
-        message: errorMessage ?? AppConstants.genericError,
-        onRetry: () {
-          ref.read(galleryProvider.notifier).loadPhotos();
-        },
-        icon: Icons.pets,
-      );
-    }
-
-    // Success state
-    if (photos.isNotEmpty) {
-      return RefreshIndicator(
-        onRefresh: () => ref.read(galleryProvider.notifier).refreshPhotos(),
-        child: PhotoGridView(
-          photos: photos,
-          onPhotoTap: (photo) {
-            context.showSnackBar('Tapped: ${photo.name}');
-            AppLogger.info('Photo tapped: ${photo.id}');
-          },
+    return asyncPhotos.when(
+      loading: () => const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading your cat photos...'),
+          ],
         ),
-      );
-    }
+      ),
+      error: (error, stackTrace) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text('Oops! Something went wrong'),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                ref.read(galleryProvider.notifier).loadPhotos();
+              },
+              child: const Text('Try Again'),
+            ),
+          ],
+        ),
+      ),
+      data: (photos) {
+        if (photos.isEmpty) {
+          return _buildEmptyState();
+        }
 
-    // Initial/empty state
-    return _buildEmptyState();
+        return RefreshIndicator(
+          onRefresh: () => ref.read(galleryProvider.notifier).refreshPhotos(),
+          child: _PhotoGridView(photos: photos),
+        );
+      },
+    );
   }
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.all(AppConstants.spacingLG),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Welcome Icon
-          const Icon(Icons.pets, size: 80, color: Colors.purple),
-          SizedBox(height: context.isMobile ? 16 : 24),
-
-          // Welcome Text
-          Text(
-            'Welcome to ${AppConstants.appName}!',
-            style: context.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.pets, size: 80, color: Colors.purple),
+            const SizedBox(height: 16),
+            Text(
+              'Welcome to Cat Gallery!',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppConstants.spacingSM),
+            const SizedBox(height: 8),
+            Text(
+              'Your cat photos will appear here',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () {
+                ref.read(galleryProvider.notifier).loadPhotos();
+              },
+              icon: const Icon(Icons.photo_library),
+              label: const Text('Load Cat Photos'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-          Text(
-            AppConstants.appDescription,
-            style: context.textTheme.bodyLarge?.copyWith(color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
+class _PhotoGridView extends ConsumerWidget {
+  final List<CatPhoto> photos;
 
-          const SizedBox(height: AppConstants.spacingXL),
+  const _PhotoGridView({required this.photos});
 
-          // Action Buttons
-          Column(
-            children: [
-              CustomButton(
-                onPressed: () {
-                  ref.read(galleryProvider.notifier).loadPhotos();
-                },
-                text: 'Load Cat Photos',
-                icon: Icons.photo_library,
-                isFullWidth: true,
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.0,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: photos.length,
+      itemBuilder: (context, index) {
+        final photo = photos[index];
+        return _CatPhotoItem(photo: photo);
+      },
+    );
+  }
+}
+
+class _CatPhotoItem extends ConsumerWidget {
+  final CatPhoto photo;
+
+  const _CatPhotoItem({required this.photo});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Stack(
+        children: [
+          // Photo
+          Positioned.fill(
+            child: CachedNetworkImage(
+              imageUrl: photo.url,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                color: Colors.grey[300],
+                child: const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               ),
-
-              const SizedBox(height: AppConstants.spacingMD),
-
-              CustomButton(
-                onPressed: () {
-                  ref.read(galleryProvider.notifier).simulateError();
-                },
-                text: 'Test Error State',
-                icon: Icons.error,
-                variant: ButtonVariant.outlined,
-                isFullWidth: true,
+              errorWidget: (context, url, error) => Container(
+                color: Colors.grey[200],
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.pets, size: 40, color: Colors.grey[400]),
+                    const SizedBox(height: 8),
+                    Text(
+                      '🐱',
+                      style: Theme.of(context).textTheme.headlineLarge,
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
+          ),
+
+          // Favorite button
+          Positioned(
+            top: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: () {
+                ref.read(galleryProvider.notifier).toggleFavorite(photo.id);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  photo.isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: photo.isFavorite ? Colors.red : Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+
+          // Info overlay
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    photo.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.visibility,
+                        size: 10,
+                        color: Colors.white70,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${(photo.confidence * 100).toInt()}% cat',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

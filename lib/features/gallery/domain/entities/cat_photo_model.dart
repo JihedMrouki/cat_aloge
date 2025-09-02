@@ -1,4 +1,5 @@
-import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
+// lib/features/gallery/domain/entities/cat_photo_model.dart
+import 'cat_photo.dart';
 
 class CatPhotoModel extends CatPhoto {
   const CatPhotoModel({
@@ -9,6 +10,7 @@ class CatPhotoModel extends CatPhoto {
     required super.isFavorite,
     required super.createdAt,
     super.modifiedAt,
+    super.detectionResult,
   });
 
   factory CatPhotoModel.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class CatPhotoModel extends CatPhoto {
       isFavorite: entity.isFavorite,
       createdAt: entity.createdAt,
       modifiedAt: entity.modifiedAt,
+      detectionResult: entity.detectionResult,
     );
   }
 
@@ -58,9 +61,11 @@ class CatPhotoModel extends CatPhoto {
       isFavorite: isFavorite,
       createdAt: createdAt,
       modifiedAt: modifiedAt,
+      detectionResult: detectionResult,
     );
   }
 
+  @override
   CatPhotoModel copyWith({
     String? id,
     String? url,
@@ -69,6 +74,7 @@ class CatPhotoModel extends CatPhoto {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? modifiedAt,
+    DetectionResult? detectionResult,
   }) {
     return CatPhotoModel(
       id: id ?? this.id,
@@ -78,6 +84,7 @@ class CatPhotoModel extends CatPhoto {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       modifiedAt: modifiedAt ?? this.modifiedAt,
+      detectionResult: detectionResult ?? this.detectionResult,
     );
   }
 }

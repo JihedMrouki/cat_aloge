@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
-import 'dart:ui' as img;
+import 'dart:ui';
 import 'package:cat_aloge/core/utils/logger.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
+import 'package:cat_aloge/features/gallery/domain/entities/detection_result.dart';
 import 'package:image/image.dart';
-import 'package:image/image.dart' as img show decodeImage;
+import 'package:image/image.dart';
+import 'package:image/image.dart' as img;
 import 'package:photo_manager/photo_manager.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
@@ -101,7 +103,7 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
       // Load and preprocess image
       final File imageFile = File(photoPath);
       final Uint8List imageBytes = await imageFile.readAsBytes();
-      final img.Image? image = img.decodeImage(imageBytes);
+      final img.Image? image = img.decodeImage(imageBytes) as img.Image?;
 
       if (image == null) {
         return DetectionResult(
@@ -232,9 +234,8 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
     );
 
     for (int i = 0; i < photos.length; i += batchSize) {
-      final int end = (i + batchSize > photos.length)
-          ? photos.length
-          : i + batchSize;
+      final int end =
+          (i + batchSize > photos.length) ? photos.length : i + batchSize;
       final batch = photos.sublist(i, end);
 
       AppLogger.info(
@@ -269,7 +270,7 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
             path: file.path,
             fileName: asset.title ?? 'Unknown',
             dateAdded: asset.createDateTime,
-            sizeBytes: await asset.size,
+            sizeBytes: asset.size,
             width: asset.width,
             height: asset.height,
             detectionResult: detection,

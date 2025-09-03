@@ -1,9 +1,10 @@
 import 'package:cat_aloge/core/theme/app_colors.dart';
+import 'package:cat_aloge/core/theme/text_styles.dart';
+import 'package:cat_aloge/features/permissions/domain/entities/permission_state.dart';
 import 'package:cat_aloge/features/permissions/views/providers/permission_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:photo_manager/photo_manager.dart';
 
 class PhotoPermissionScreen extends ConsumerWidget {
   static const String routeName = '/permission';
@@ -61,7 +62,7 @@ class _LoadingView extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'Checking photo permissions...',
-            style: AppTextStyles.bodyMedium,
+            style: AppTextStyles.captionText,
           ),
         ],
       ),
@@ -87,7 +88,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'Permission Error',
-              style: AppTextStyles.headlineMedium.copyWith(
+              style: AppTextStyles.captionText.copyWith(
                 color: AppColors.error,
               ),
             ),
@@ -95,8 +96,8 @@ class _ErrorView extends StatelessWidget {
             Text(
               error,
               textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+              style: AppTextStyles.captionText.copyWith(
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 24),
@@ -125,15 +126,15 @@ class _PermissionGrantedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.check_circle, size: 64, color: AppColors.success),
-          SizedBox(height: 16),
-          Text('Permission Granted!', style: AppTextStyles.headlineMedium),
-          SizedBox(height: 8),
-          Text('Loading your cat photos...', style: AppTextStyles.bodyMedium),
+          const Icon(Icons.check_circle, size: 64, color: AppColors.success),
+          const SizedBox(height: 16),
+          Text('Permission Granted!', style: AppTextStyles.captionText),
+          const SizedBox(height: 8),
+          Text('Loading your cat photos...', style: AppTextStyles.captionText),
         ],
       ),
     );
@@ -174,7 +175,7 @@ class _PermissionRequestView extends StatelessWidget {
           // Title
           Text(
             _getTitle(),
-            style: AppTextStyles.headlineLarge,
+            style: AppTextStyles.captionText,
             textAlign: TextAlign.center,
           ),
 
@@ -183,8 +184,8 @@ class _PermissionRequestView extends StatelessWidget {
           // Description
           Text(
             permissionState.message,
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textSecondary,
+            style: AppTextStyles.captionText.copyWith(
+              color: AppColors.gray900,
             ),
             textAlign: TextAlign.center,
           ),
@@ -197,7 +198,7 @@ class _PermissionRequestView extends StatelessWidget {
           const SizedBox(height: 32),
 
           // Action buttons
-          _buildActionButtons(),
+          _buildActionButtons(context),
         ],
       ),
     );
@@ -273,15 +274,15 @@ class _PermissionRequestView extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AppTextStyles.bodyLarge.copyWith(
+                style: AppTextStyles.captionText.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 description,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+                style: AppTextStyles.captionText.copyWith(
+                  color: AppColors.gray900,
                 ),
               ),
             ],
@@ -291,7 +292,7 @@ class _PermissionRequestView extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context) {
     if (permissionState.isPermanentlyDenied) {
       return Column(
         children: [
@@ -314,8 +315,8 @@ class _PermissionRequestView extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'Please enable photo access in Settings > Privacy & Security > Photos',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+            style: AppTextStyles.captionText.copyWith(
+              color: AppColors.gray900,
             ),
             textAlign: TextAlign.center,
           ),
@@ -345,12 +346,11 @@ class _PermissionRequestView extends StatelessWidget {
           const SizedBox(height: 12),
           TextButton(
             onPressed: () {
-              // Show info dialog
               _showPermissionInfoDialog(context);
             },
             child: Text(
               'Why do we need this permission?',
-              style: AppTextStyles.bodyMedium.copyWith(
+              style: AppTextStyles.captionText.copyWith(
                 color: AppColors.primary,
               ),
             ),

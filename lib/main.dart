@@ -1,30 +1,59 @@
-import 'package:cat_aloge/core/theme/app_theme.dart';
-import 'package:cat_aloge/features/gallery/presentation/providers/gallery_providers.dart';
+import 'package:cat_aloge/core/constants/hive_boxes.dart';
 import 'package:cat_aloge/features/gallery/presentation/views/my_cat_screen.dart';
 import 'package:cat_aloge/features/gallery/presentation/views/photo_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
+final appInitializationProvider = FutureProvider<void>((ref) async {
+  try {
+    // Step 1: Initialize Hive for Flutter.
+    await Hive.initFlutter();
+
+    // Step 2: Open essential Hive boxes needed by the app.
+    await Hive.openBox(HiveBoxes.settings);
+    await Hive.openBox(HiveBoxes.detectionStats);
+
+    // Add any other async initialization tasks here.
+  } catch (e) {
+    // If any part of initialization fails, throw an error.
+    // The FutureProvider will catch this and enter an AsyncError state.
+    debugPrint("FATAL: Error during app initialization: $e");
+    rethrow;
+  }
+});
+
+// =========================================================================
+// APP ENTRY POINT
+// =========================================================================
 
 void main() async {
+  // Ensure Flutter bindings are ready before running the app.
   WidgetsFlutterBinding.ensureInitialized();
+  // Wrap the entire app in a ProviderScope to enable Riverpod.
   runApp(const ProviderScope(child: CatGalleryApp()));
 }
+
+// =========================================================================
+// ROOT WIDGET
+// =========================================================================
 
 class CatGalleryApp extends ConsumerWidget {
   const CatGalleryApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch initialization to ensure app is ready
+    // Watch the initialization provider. The app's UI will react to its state.
     final initialization = ref.watch(appInitializationProvider);
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Cat Gallery',
-      theme: AppTheme.lightTheme,
+      // theme: AppTheme.lightTheme, // You can add your theme data here.
       routerConfig: _router,
       builder: (context, child) {
+        // This builder shows the correct screen based on the initialization state.
         return initialization.when(
           loading: () => const MaterialApp(
             home: _InitializationScreen(),
@@ -41,7 +70,10 @@ class CatGalleryApp extends ConsumerWidget {
   }
 }
 
-// Initialization loading screen
+// =========================================================================
+// UI HELPERS (Initialization and Error Screens)
+// =========================================================================
+
 class _InitializationScreen extends StatelessWidget {
   const _InitializationScreen();
 
@@ -55,23 +87,14 @@ class _InitializationScreen extends StatelessWidget {
           children: [
             Icon(Icons.pets, size: 80, color: Colors.purple),
             SizedBox(height: 24),
-            Text(
-              'Cat Gallery',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.purple,
-              ),
-            ),
+            Text('Cat Gallery',
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple)),
             SizedBox(height: 16),
-            Text(
-              'Initializing...',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            SizedBox(height: 24),
             CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
-            ),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.purple)),
           ],
         ),
       ),
@@ -79,10 +102,8 @@ class _InitializationScreen extends StatelessWidget {
   }
 }
 
-// Error screen for initialization failures
 class _ErrorScreen extends StatelessWidget {
   final String error;
-
   const _ErrorScreen({required this.error});
 
   @override
@@ -97,32 +118,15 @@ class _ErrorScreen extends StatelessWidget {
             children: [
               const Icon(Icons.error_outline, size: 80, color: Colors.red),
               const SizedBox(height: 24),
-              const Text(
-                'Initialization Error',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
+              const Text('Initialization Error',
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red)),
               const SizedBox(height: 16),
-              Text(
-                'Failed to start the app:\n$error',
-                style: const TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  // Restart the app
-                  main();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Restart App'),
-              ),
+              Text('Failed to start the app:\n$error',
+                  style: const TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -131,7 +135,10 @@ class _ErrorScreen extends StatelessWidget {
   }
 }
 
-// Router configuration with photo detail navigation
+// =========================================================================
+// ROUTER CONFIGURATION
+// =========================================================================
+
 final GoRouter _router = GoRouter(
   initialLocation: '/',
   routes: <RouteBase>[
@@ -150,16 +157,5 @@ final GoRouter _router = GoRouter(
         return PhotoDetailScreen(photoId: photoId);
       },
     ),
-    // Future routes can be added here:
-    // GoRoute(
-    //   path: '/favorites',
-    //   name: 'favorites',
-    //   builder: (context, state) => const FavoritesScreen(),
-    // ),
-    // GoRoute(
-    //   path: '/settings',
-    //   name: 'settings',
-    //   builder: (context, state) => const SettingsScreen(),
-    // ),
   ],
 );

@@ -6,20 +6,20 @@ class SettingTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget? leading;
-  final Widget trailing;
+  final Widget? trailing;
   final VoidCallback? onTap;
-  
+
   const SettingTile({
     super.key,
     required this.title,
     this.subtitle,
     this.leading,
-    required this.trailing,
+    this.trailing,
     this.onTap,
   });
 
-  // Switch Setting
-  factory SettingTile.switch({
+  /// Creates a setting tile with a switch.
+  factory SettingTile.switchTile({
     required String title,
     String? subtitle,
     Widget? leading,
@@ -38,32 +38,8 @@ class SettingTile extends StatelessWidget {
       onTap: () => onChanged(!value),
     );
   }
-  
-  // Dropdown Setting
-  factory SettingTile.dropdown<T>({
-    required String title,
-    String? subtitle,
-    Widget? leading,
-    required T value,
-    required List<DropdownMenuItem<T>> items,
-    required ValueChanged<T?> onChanged,
-  }) {
-    return SettingTile(
-      title: title,
-      subtitle: subtitle,
-      leading: leading,
-      trailing: DropdownButton<T>(
-        value: value,
-        items: items,
-        onChanged: onChanged,
-        underline: Container(),
-        style: AppTextStyles.buttonText,
-        dropdownColor: AppColors.surface,
-      ),
-    );
-  }
-  
-  // Slider Setting
+
+  /// Creates a setting tile with a slider.
   factory SettingTile.slider({
     required String title,
     String? subtitle,
@@ -80,13 +56,13 @@ class SettingTile extends StatelessWidget {
       subtitle: subtitle,
       leading: leading,
       trailing: SizedBox(
-        width: 120,
+        width: 150,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              valueFormatter?.call(value) ?? value.toStringAsFixed(2),
+              valueFormatter?.call(value) ?? value.toStringAsFixed(1),
               style: AppTextStyles.buttonText.copyWith(
                 fontWeight: FontWeight.w600,
                 color: AppColors.primary,
@@ -105,8 +81,8 @@ class SettingTile extends StatelessWidget {
       ),
     );
   }
-  
-  // Number Setting
+
+  /// Creates a setting tile for incrementing or decrementing a number.
   factory SettingTile.number({
     required String title,
     String? subtitle,
@@ -129,13 +105,12 @@ class SettingTile extends StatelessWidget {
             icon: const Icon(Icons.remove, size: 20),
             color: AppColors.primary,
           ),
-          Container(
-            width: 60,
+          SizedBox(
+            width: 40,
             child: Text(
               value.toString(),
-              style: AppTextStyles.buttonText.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppTextStyles.buttonText
+                  .copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
           ),
@@ -149,29 +124,46 @@ class SettingTile extends StatelessWidget {
     );
   }
 
+  /// Creates a tappable setting tile, typically for navigation.
+  factory SettingTile.navigation({
+    required String title,
+    String? subtitle,
+    Widget? leading,
+    Widget? trailing =
+        const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
+    required VoidCallback onTap,
+  }) {
+    return SettingTile(
+      title: title,
+      subtitle: subtitle,
+      leading: leading,
+      trailing: trailing,
+      onTap: onTap,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
             if (leading != null) ...[
               leading!,
               const SizedBox(width: 16),
             ],
-            
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     title,
-                    style: AppTextStyles.buttonText.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: AppTextStyles.buttonText
+                        .copyWith(fontWeight: FontWeight.w500),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 4),
@@ -179,15 +171,17 @@ class SettingTile extends StatelessWidget {
                       subtitle!,
                       style: AppTextStyles.buttonText.copyWith(
                         color: AppColors.gray500,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ],
               ),
             ),
-            
-            const SizedBox(width: 16),
-            trailing,
+            if (trailing != null) ...[
+              const SizedBox(width: 16),
+              trailing!,
+            ],
           ],
         ),
       ),

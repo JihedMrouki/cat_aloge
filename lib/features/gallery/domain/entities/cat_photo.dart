@@ -8,10 +8,9 @@ class CatPhoto {
   final int sizeBytes;
   final int width;
   final int height;
-  final DetectionResult? detectionResult;
+  final DetectionResult detectionResult;
   final DateTime? lastModified;
   final String? mimeType;
-  final bool isFavorite;
 
   const CatPhoto({
     required this.id,
@@ -21,13 +20,11 @@ class CatPhoto {
     required this.sizeBytes,
     required this.width,
     required this.height,
-    this.detectionResult,
+    required this.detectionResult,
     this.lastModified,
     this.mimeType,
-    this.isFavorite = false,
   });
 
-  // Factory constructor for device photos
   factory CatPhoto.fromDevicePhoto({
     required String id,
     required String path,
@@ -36,7 +33,7 @@ class CatPhoto {
     required int sizeBytes,
     required int width,
     required int height,
-    DetectionResult? detectionResult,
+    required DetectionResult detectionResult,
     DateTime? lastModified,
     String? mimeType,
   }) {
@@ -54,36 +51,30 @@ class CatPhoto {
     );
   }
 
-  // Computed properties
-  double get aspectRatio => height != 0 ? width / height : 1.0;
-
-  String get sizeDescription {
-    if (sizeBytes < 1024) return '$sizeBytes B';
-    if (sizeBytes < 1024 * 1024) {
-      return '${(sizeBytes / 1024).toStringAsFixed(1)} KB';
+  String get fileSizeFormatted {
+    if (sizeBytes < 1024) {
+      return '${sizeBytes}B';
+    } else if (sizeBytes < 1024 * 1024) {
+      return '${(sizeBytes / 1024).toStringAsFixed(1)}KB';
+    } else {
+      return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB';
     }
-    return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  String get dimensionsDescription => '${width} × ${height}';
-
-  bool get hasHighConfidenceDetection =>
-      detectionResult?.hasCat == true &&
-      (detectionResult?.confidence ?? 0) >= 0.8;
-
-  String get confidenceBadgeText {
-    final result = detectionResult;
-    if (result == null || !result.hasCat) return '';
-
-    return switch (result.confidenceLevel) {
-      ConfidenceLevel.high => '😻',
-      ConfidenceLevel.medium => '😸',
-      ConfidenceLevel.low => '🙂',
-      ConfidenceLevel.veryLow => '🤔',
-    };
+  String get aspectRatioFormatted {
+    if (width == 0 || height == 0) return 'Unknown';
+    final ratio = width / height;
+    return '${ratio.toStringAsFixed(2)}:1';
   }
 
-  // Copy methods for state updates
+  String get resolutionFormatted {
+    return '${width}x${height}';
+  }
+
+  double get confidencePercentage {
+    return detectionResult.confidence * 100;
+  }
+
   CatPhoto copyWith({
     String? id,
     String? path,
@@ -95,7 +86,6 @@ class CatPhoto {
     DetectionResult? detectionResult,
     DateTime? lastModified,
     String? mimeType,
-    bool? isFavorite,
   }) {
     return CatPhoto(
       id: id ?? this.id,
@@ -108,53 +98,31 @@ class CatPhoto {
       detectionResult: detectionResult ?? this.detectionResult,
       lastModified: lastModified ?? this.lastModified,
       mimeType: mimeType ?? this.mimeType,
-      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 
-  CatPhoto toggleFavorite() => copyWith(isFavorite: !isFavorite);
-
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CatPhoto &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          path == other.path &&
-          fileName == other.fileName &&
-          dateAdded == other.dateAdded &&
-          sizeBytes == other.sizeBytes &&
-          width == other.width &&
-          height == other.height &&
-          detectionResult == other.detectionResult &&
-          lastModified == other.lastModified &&
-          mimeType == other.mimeType &&
-          isFavorite == other.isFavorite;
-
-  @override
-  int get hashCode =>
-      id.hashCode ^
-      path.hashCode ^
-      fileName.hashCode ^
-      dateAdded.hashCode ^
-      sizeBytes.hashCode ^
-      width.hashCode ^
-      height.hashCode ^
-      detectionResult.hashCode ^
-      lastModified.hashCode ^
-      mimeType.hashCode ^
-      isFavorite.hashCode;
+  List<Object?> get props => [
+    id,
+    path,
+    fileName,
+    dateAdded,
+    sizeBytes,
+    width,
+    height,
+    detectionResult,
+    lastModified,
+    mimeType,
+  ];
 
   @override
   String toString() {
-    return 'CatPhoto('
+    return 'CatPhoto{'
         'id: $id, '
         'fileName: $fileName, '
-        'size: $sizeDescription, '
-        'dimensions: $dimensionsDescription, '
-        'hasCat: ${detectionResult?.hasCat ?? false}, '
-        'confidence: ${detectionResult != null ? (detectionResult!.confidence * 100).toStringAsFixed(1) : 'N/A'}%, '
-        'isFavorite: $isFavorite'
-        ')';
+        'confidence: ${confidencePercentage.toStringAsFixed(1)}%, '
+        'size: $fileSizeFormatted, '
+        'resolution: $resolutionFormatted'
+        '}';
   }
 }

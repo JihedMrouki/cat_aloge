@@ -3,113 +3,75 @@ class DetectionResult {
   final double confidence;
   final List<BoundingBox> boundingBoxes;
   final int processingTimeMs;
-  final DateTime detectedAt;
+  final String? error;
 
-  DetectionResult({
+  const DetectionResult({
     required this.hasCat,
     required this.confidence,
     required this.boundingBoxes,
     required this.processingTimeMs,
-    DateTime? detectedAt,
-  }) : detectedAt = detectedAt ?? DateTime.now();
+    this.error,
+  });
 
-  // --- MANUAL JSON CONVERSION ---
-
-  /// Creates a DetectionResult instance from a JSON map.
-  factory DetectionResult.fromJson(Map<String, dynamic> json) {
-    return DetectionResult(
-      hasCat: json['hasCat'] as bool,
-      confidence: (json['confidence'] as num).toDouble(),
-      boundingBoxes: (json['boundingBoxes'] as List<dynamic>)
-          .map((item) => BoundingBox.fromJson(item as Map<String, dynamic>))
-          .toList(),
-      processingTimeMs: json['processingTimeMs'] as int,
-      detectedAt: DateTime.parse(json['detectedAt'] as String),
-    );
-  }
-
-  /// Converts this DetectionResult instance to a JSON map.
-  Map<String, dynamic> toJson() {
-    return {
-      'hasCat': hasCat,
-      'confidence': confidence,
-      'boundingBoxes': boundingBoxes.map((box) => box.toJson()).toList(),
-      'processingTimeMs': processingTimeMs,
-      'detectedAt': detectedAt.toIso8601String(),
-    };
-  }
-
-  // --- EXISTING FACTORIES & HELPERS ---
-
-  factory DetectionResult.detected({
-    required double confidence,
-    required List<BoundingBox> boundingBoxes,
-    required int processingTimeMs,
-  }) {
-    return DetectionResult(
-      hasCat: true,
-      confidence: confidence,
-      boundingBoxes: boundingBoxes,
-      processingTimeMs: processingTimeMs,
-      detectedAt: DateTime.now(),
-    );
-  }
-
-  factory DetectionResult.notDetected({int processingTimeMs = 0}) {
+  factory DetectionResult.error(String error, int processingTimeMs) {
     return DetectionResult(
       hasCat: false,
       confidence: 0.0,
       boundingBoxes: const [],
       processingTimeMs: processingTimeMs,
-      detectedAt: DateTime.now(),
+      error: error,
     );
   }
 
-  ConfidenceLevel get confidenceLevel {
-    if (confidence >= 0.9) return ConfidenceLevel.high;
-    if (confidence >= 0.7) return ConfidenceLevel.medium;
-    if (confidence >= 0.5) return ConfidenceLevel.low;
-    return ConfidenceLevel.veryLow;
+  factory DetectionResult.noCat(int processingTimeMs) {
+    return DetectionResult(
+      hasCat: false,
+      confidence: 0.0,
+      boundingBoxes: const [],
+      processingTimeMs: processingTimeMs,
+    );
   }
 
-  String get confidenceDescription {
-    switch (confidenceLevel) {
-      case ConfidenceLevel.high:
-        return 'Very confident';
-      case ConfidenceLevel.medium:
-        return 'Confident';
-      case ConfidenceLevel.low:
-        return 'Somewhat confident';
-      case ConfidenceLevel.veryLow:
-        return 'Low confidence';
-    }
-  }
+  bool get hasError => error != null;
 
-  String get performanceDescription {
-    if (processingTimeMs < 100) return 'Very fast';
-    if (processingTimeMs < 500) return 'Fast';
-    if (processingTimeMs < 1000) return 'Moderate';
-    return 'Slow';
+  String get confidencePercentage =>
+      '${(confidence * 100).toStringAsFixed(1)}%';
+
+  DetectionResult copyWith({
+    bool? hasCat,
+    double? confidence,
+    List<BoundingBox>? boundingBoxes,
+    int? processingTimeMs,
+    String? error,
+  }) {
+    return DetectionResult(
+      hasCat: hasCat ?? this.hasCat,
+      confidence: confidence ?? this.confidence,
+      boundingBoxes: boundingBoxes ?? this.boundingBoxes,
+      processingTimeMs: processingTimeMs ?? this.processingTimeMs,
+      error: error ?? this.error,
+    );
   }
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is DetectionResult &&
-          runtimeType == other.runtimeType &&
-          hasCat == other.hasCat &&
-          confidence == other.confidence &&
-          boundingBoxes == other.boundingBoxes &&
-          processingTimeMs == other.processingTimeMs &&
-          detectedAt == other.detectedAt;
+  List<Object?> get props => [
+    hasCat,
+    confidence,
+    boundingBoxes,
+    processingTimeMs,
+    error,
+  ];
 
   @override
-  int get hashCode =>
-      hasCat.hashCode ^
-      confidence.hashCode ^
-      boundingBoxes.hashCode ^
-      processingTimeMs.hashCode ^
-      detectedAt.hashCode;
+  String toString() {
+    return 'DetectionResult{'
+        'hasCat: $hasCat, '
+        'confidence: $confidencePercentage, '
+        'boundingBoxes: ${boundingBoxes.length}, '
+        'processingTime: ${processingTimeMs}ms'
+        '${hasError ? ', error: $error' : ''}'
+        '}';
+  }
 }
 
 class BoundingBox {
@@ -129,57 +91,69 @@ class BoundingBox {
     this.labelConfidence,
   });
 
-  // --- MANUAL JSON CONVERSION ---
-
-  /// Creates a BoundingBox instance from a JSON map.
-  factory BoundingBox.fromJson(Map<String, dynamic> json) {
+  // Convert normalized coordinates to pixel coordinates
+  BoundingBox toPixelCoordinates(int imageWidth, int imageHeight) {
     return BoundingBox(
-      x: (json['x'] as num).toDouble(),
-      y: (json['y'] as num).toDouble(),
-      width: (json['width'] as num).toDouble(),
-      height: (json['height'] as num).toDouble(),
-      label: json['label'] as String?,
-      labelConfidence: (json['labelConfidence'] as num?)?.toDouble(),
+      x: x * imageWidth,
+      y: y * imageHeight,
+      width: width * imageWidth,
+      height: height * imageHeight,
+      label: label,
+      labelConfidence: labelConfidence,
     );
   }
 
-  /// Converts this BoundingBox instance to a JSON map.
-  Map<String, dynamic> toJson() {
-    return {
-      'x': x,
-      'y': y,
-      'width': width,
-      'height': height,
-      'label': label,
-      'labelConfidence': labelConfidence,
-    };
+  // Convert pixel coordinates to normalized coordinates
+  BoundingBox toNormalizedCoordinates(int imageWidth, int imageHeight) {
+    return BoundingBox(
+      x: x / imageWidth,
+      y: y / imageHeight,
+      width: width / imageWidth,
+      height: height / imageHeight,
+      label: label,
+      labelConfidence: labelConfidence,
+    );
   }
 
-  // --- EXISTING HELPERS ---
-
-  ({double x, double y}) get center => (x: x + width / 2, y: y + height / 2);
+  double get centerX => x + (width / 2);
+  double get centerY => y + (height / 2);
   double get area => width * height;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is BoundingBox &&
-          runtimeType == other.runtimeType &&
-          x == other.x &&
-          y == other.y &&
-          width == other.width &&
-          height == other.height &&
-          label == other.label &&
-          labelConfidence == other.labelConfidence;
+  String? get labelWithConfidence {
+    if (label == null) return null;
+    if (labelConfidence == null) return label;
+    return '$label (${(labelConfidence! * 100).toStringAsFixed(1)}%)';
+  }
+
+  BoundingBox copyWith({
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+    String? label,
+    double? labelConfidence,
+  }) {
+    return BoundingBox(
+      x: x ?? this.x,
+      y: y ?? this.y,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      label: label ?? this.label,
+      labelConfidence: labelConfidence ?? this.labelConfidence,
+    );
+  }
 
   @override
-  int get hashCode =>
-      x.hashCode ^
-      y.hashCode ^
-      width.hashCode ^
-      height.hashCode ^
-      label.hashCode ^
-      labelConfidence.hashCode;
+  List<Object?> get props => [x, y, width, height, label, labelConfidence];
+
+  @override
+  String toString() {
+    return 'BoundingBox{'
+        'x: ${x.toStringAsFixed(3)}, '
+        'y: ${y.toStringAsFixed(3)}, '
+        'width: ${width.toStringAsFixed(3)}, '
+        'height: ${height.toStringAsFixed(3)}'
+        '${labelWithConfidence != null ? ', label: $labelWithConfidence' : ''}'
+        '}';
+  }
 }
-
-enum ConfidenceLevel { veryLow, low, medium, high }

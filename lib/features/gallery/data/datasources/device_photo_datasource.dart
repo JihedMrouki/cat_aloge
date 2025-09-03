@@ -1,21 +1,19 @@
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:typed_data';
-import 'dart:ui';
+
 import 'package:cat_aloge/core/utils/logger.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/detection_result.dart';
-import 'package:image/image.dart';
-import 'package:image/image.dart';
 import 'package:image/image.dart' as img;
 import 'package:photo_manager/photo_manager.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 abstract class DevicePhotoDataSource {
-  Future<List<CatPhoto>> getDeviceCatPhotos();
-  Future<List<AssetEntity>> getAllDevicePhotos();
+  Future<List<CatPhoto>> getCatPhotos();
   Future<DetectionResult> detectCatInPhoto(String photoPath);
   Future<void> refreshPhotos();
+  Future<void> clearCache();
+  void dispose();
 }
 
 class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
@@ -26,71 +24,29 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
   Interpreter? _interpreter;
   bool _isModelLoaded = false;
   final List<CatPhoto> _cachedCatPhotos = [];
+  bool _isInitialized = false;
 
   @override
-  Future<List<CatPhoto>> getDeviceCatPhotos() async {
+  Future<List<CatPhoto>> getCatPhotos() async {
     try {
-      AppLogger.info('Starting device cat photos scan...');
+      AppLogger.info('Getting cat photos from device...');
+
+      if (!_isInitialized) {
+        await _initialize();
+      }
 
       // Return cached results if available
       if (_cachedCatPhotos.isNotEmpty) {
         AppLogger.info(
           'Returning ${_cachedCatPhotos.length} cached cat photos',
         );
-        return _cachedCatPhotos;
+        return List.from(_cachedCatPhotos);
       }
 
-      // Get all photos from device
-      final allPhotos = await getAllDevicePhotos();
-      AppLogger.info('Found ${allPhotos.length} total photos on device');
-
-      // Process photos in background isolate for better performance
-      final catPhotos = await _processCatDetectionInBackground(allPhotos);
-
-      _cachedCatPhotos.clear();
-      _cachedCatPhotos.addAll(catPhotos);
-
-      AppLogger.info('Successfully detected ${catPhotos.length} cat photos');
-      return catPhotos;
+      // Scan device for cat photos
+      return await _scanDeviceForCatPhotos();
     } catch (e, stackTrace) {
-      AppLogger.error('Error getting device cat photos', e, stackTrace);
-      rethrow;
-    }
-  }
-
-  @override
-  Future<List<AssetEntity>> getAllDevicePhotos() async {
-    try {
-      // Request permissions
-      final PermissionState permission =
-          await PhotoManager.requestPermissionExtend();
-      if (!permission.isAuth) {
-        throw Exception('Photo permission denied');
-      }
-
-      // Get all photo albums
-      final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
-        type: RequestType.image,
-        hasAll: true,
-        onlyAll: true,
-      );
-
-      if (albums.isEmpty) {
-        AppLogger.warning('No photo albums found');
-        return [];
-      }
-
-      // Get photos from "All" album (first album contains all photos)
-      final AssetPathEntity allPhotos = albums.first;
-      final List<AssetEntity> photos = await allPhotos.getAssetListRange(
-        start: 0,
-        end: await allPhotos.assetCountAsync,
-      );
-
-      AppLogger.info('Retrieved ${photos.length} photos from device');
-      return photos;
-    } catch (e, stackTrace) {
-      AppLogger.error('Error getting device photos', e, stackTrace);
+      AppLogger.error('Error getting cat photos', e, stackTrace);
       rethrow;
     }
   }
@@ -102,8 +58,12 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
 
       // Load and preprocess image
       final File imageFile = File(photoPath);
+      if (!await imageFile.exists()) {
+        throw Exception('Image file not found: $photoPath');
+      }
+
       final Uint8List imageBytes = await imageFile.readAsBytes();
-      final img.Image? image = img.decodeImage(imageBytes) as img.Image?;
+      final img.Image? image = img.decodeImage(imageBytes);
 
       if (image == null) {
         return DetectionResult(
@@ -116,48 +76,21 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
 
       final stopwatch = Stopwatch()..start();
 
-      // Resize and normalize image
-      final img.Image resized = img.copyResize(
-        image,
-        width: _inputSize,
-        height: _inputSize,
-      );
-      final input = _imageToInputTensor(resized);
+      // Use ML detection if model is loaded, otherwise fallback to heuristic
+      DetectionResult result;
+      if (_interpreter != null) {
+        result = await _mlDetection(image, stopwatch);
+      } else {
+        result = await _heuristicDetection(photoPath, stopwatch);
+      }
 
-      // Run inference
-      final output = List.filled(
-        1 * 2,
-        0.0,
-      ).reshape([1, 2]); // [batch, classes] - cat/no-cat
-      _interpreter!.run(input, output);
-
-      stopwatch.stop();
-
-      // Process results
-      final catProbability = output[0][1]; // Index 1 is "cat" class
-      final hasCat = catProbability >= _confidenceThreshold;
-
-      AppLogger.info(
-        'Cat detection: ${hasCat ? 'CAT FOUND' : 'no cat'} '
-        '(confidence: ${(catProbability * 100).toStringAsFixed(1)}%, '
-        'time: ${stopwatch.elapsedMilliseconds}ms)',
+      AppLogger.debug(
+        'Cat detection for $photoPath: ${result.hasCat ? 'CAT FOUND' : 'no cat'} '
+        '(confidence: ${(result.confidence * 100).toStringAsFixed(1)}%, '
+        'time: ${result.processingTimeMs}ms)',
       );
 
-      return DetectionResult(
-        hasCat: hasCat,
-        confidence: catProbability,
-        boundingBoxes: hasCat
-            ? [
-                BoundingBox(
-                  x: 0.1,
-                  y: 0.1,
-                  width: 0.8,
-                  height: 0.8,
-                ), // Simplified bounding box
-              ]
-            : [],
-        processingTimeMs: stopwatch.elapsedMilliseconds,
-      );
+      return result;
     } catch (e, stackTrace) {
       AppLogger.error(
         'Error detecting cat in photo: $photoPath',
@@ -177,10 +110,45 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
   Future<void> refreshPhotos() async {
     AppLogger.info('Refreshing device photos...');
     _cachedCatPhotos.clear();
-    await getDeviceCatPhotos();
+    await getCatPhotos();
+  }
+
+  @override
+  Future<void> clearCache() async {
+    AppLogger.info('Clearing photo cache');
+    _cachedCatPhotos.clear();
+  }
+
+  @override
+  void dispose() {
+    _interpreter?.close();
+    _interpreter = null;
+    _isModelLoaded = false;
+    _cachedCatPhotos.clear();
+    _isInitialized = false;
+    AppLogger.info('Device photo data source disposed');
   }
 
   // Private helper methods
+
+  Future<void> _initialize() async {
+    if (_isInitialized) return;
+
+    try {
+      AppLogger.info('Initializing device photo data source...');
+      await _ensureModelLoaded();
+      _isInitialized = true;
+      AppLogger.info('Device photo data source initialized');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to initialize device photo data source',
+        e,
+        stackTrace,
+      );
+      // Continue without ML model - will use heuristic detection
+      _isInitialized = true;
+    }
+  }
 
   Future<void> _ensureModelLoaded() async {
     if (_isModelLoaded && _interpreter != null) return;
@@ -188,12 +156,215 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
     try {
       AppLogger.info('Loading TensorFlow Lite model...');
       _interpreter = await Interpreter.fromAsset(_modelPath);
+
+      // Warm up the model
+      await _warmUpModel();
+
       _isModelLoaded = true;
       AppLogger.info('TensorFlow Lite model loaded successfully');
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to load ML model', e, stackTrace);
-      rethrow;
+      AppLogger.warning(
+        'Failed to load ML model, will use heuristic detection: $e',
+      );
+      _interpreter = null;
+      _isModelLoaded = false;
     }
+  }
+
+  Future<List<CatPhoto>> _scanDeviceForCatPhotos() async {
+    AppLogger.info('Starting device scan for cat photos...');
+
+    // Request photo permission
+    final PermissionState permission =
+        await PhotoManager.requestPermissionExtend();
+    if (!permission.isAuth) {
+      throw Exception('Photo permission not granted');
+    }
+
+    // Get all photo albums
+    final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+      type: RequestType.image,
+      hasAll: true,
+      onlyAll: true,
+    );
+
+    if (albums.isEmpty) {
+      AppLogger.warning('No photo albums found');
+      return [];
+    }
+
+    // Get photos from "All" album (contains all device photos)
+    final AssetPathEntity allPhotos = albums.first;
+    final int photoCount = await allPhotos.assetCountAsync;
+
+    AppLogger.info('Found $photoCount total photos in device');
+
+    // Process photos in batches to avoid memory issues
+    const int batchSize = 50;
+    final List<CatPhoto> allCatPhotos = [];
+
+    for (int start = 0; start < photoCount; start += batchSize) {
+      final int end = (start + batchSize > photoCount)
+          ? photoCount
+          : start + batchSize;
+
+      AppLogger.info('Processing photos $start-$end of $photoCount');
+
+      final List<AssetEntity> batch = await allPhotos.getAssetListRange(
+        start: start,
+        end: end,
+      );
+
+      final List<CatPhoto> batchCatPhotos = await _processBatch(batch);
+      allCatPhotos.addAll(batchCatPhotos);
+
+      AppLogger.debug('Batch complete: ${batchCatPhotos.length} cats found');
+
+      // Small delay to prevent overwhelming the system
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    // Cache the results
+    _cachedCatPhotos.clear();
+    _cachedCatPhotos.addAll(allCatPhotos);
+
+    AppLogger.info(
+      'Device scan complete: ${allCatPhotos.length} cat photos found',
+    );
+    return List.from(allCatPhotos);
+  }
+
+  Future<List<CatPhoto>> _processBatch(List<AssetEntity> assets) async {
+    final List<CatPhoto> catPhotos = [];
+
+    for (final AssetEntity asset in assets) {
+      try {
+        // Get the actual file
+        final File? file = await asset.file;
+        if (file == null || !await file.exists()) {
+          AppLogger.warning('Could not access file for asset: ${asset.id}');
+          continue;
+        }
+
+        // Run cat detection
+        final DetectionResult detection = await detectCatInPhoto(file.path);
+
+        if (detection.hasCat) {
+          final catPhoto = CatPhoto(
+            id: asset.id,
+            path: file.path,
+            fileName:
+                asset.title ?? 'IMG_${DateTime.now().millisecondsSinceEpoch}',
+            dateAdded: asset.createDateTime,
+            sizeBytes: asset.size,
+            width: asset.width,
+            height: asset.height,
+            detectionResult: detection,
+          );
+
+          catPhotos.add(catPhoto);
+
+          AppLogger.debug(
+            'Cat detected in ${asset.title}: '
+            '${(detection.confidence * 100).toStringAsFixed(1)}% confidence',
+          );
+        }
+      } catch (e) {
+        AppLogger.warning('Error processing asset ${asset.id}: $e');
+        continue;
+      }
+    }
+
+    return catPhotos;
+  }
+
+  Future<DetectionResult> _mlDetection(
+    img.Image image,
+    Stopwatch stopwatch,
+  ) async {
+    // Resize and normalize image
+    final img.Image resized = img.copyResize(
+      image,
+      width: _inputSize,
+      height: _inputSize,
+    );
+    final input = _imageToInputTensor(resized);
+
+    // Run inference
+    final output = List.filled(
+      1 * 2,
+      0.0,
+    ).reshape([1, 2]); // [batch, classes] - cat/no-cat
+    _interpreter!.run(input, output);
+
+    stopwatch.stop();
+
+    // Process results
+    final catProbability = output[0][1]; // Index 1 is "cat" class
+    final hasCat = catProbability >= _confidenceThreshold;
+
+    return DetectionResult(
+      hasCat: hasCat,
+      confidence: catProbability,
+      boundingBoxes: hasCat
+          ? [
+              BoundingBox(
+                x: 0.1,
+                y: 0.1,
+                width: 0.8,
+                height: 0.8,
+                label: 'cat',
+                labelConfidence: catProbability,
+              ),
+            ]
+          : [],
+      processingTimeMs: stopwatch.elapsedMilliseconds,
+    );
+  }
+
+  Future<DetectionResult> _heuristicDetection(
+    String photoPath,
+    Stopwatch stopwatch,
+  ) async {
+    AppLogger.debug('Using heuristic detection for $photoPath');
+
+    // Simple heuristic based on filename
+    final fileName = photoPath.toLowerCase();
+    final catKeywords = ['cat', 'kitty', 'kitten', 'feline', 'meow'];
+    final hasKeyword = catKeywords.any((keyword) => fileName.contains(keyword));
+
+    double confidence = 0.0;
+    bool hasCat = false;
+
+    if (hasKeyword) {
+      confidence = 0.8;
+      hasCat = true;
+    } else {
+      // Additional basic analysis could go here
+      // For now, use a very low threshold to avoid false positives
+      confidence = 0.1;
+      hasCat = false;
+    }
+
+    stopwatch.stop();
+
+    return DetectionResult(
+      hasCat: hasCat,
+      confidence: confidence,
+      boundingBoxes: hasCat
+          ? [
+              BoundingBox(
+                x: 0.15,
+                y: 0.15,
+                width: 0.7,
+                height: 0.7,
+                label: 'cat (heuristic)',
+                labelConfidence: confidence,
+              ),
+            ]
+          : [],
+      processingTimeMs: stopwatch.elapsedMilliseconds,
+    );
   }
 
   List<List<List<List<double>>>> _imageToInputTensor(img.Image image) {
@@ -222,119 +393,29 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
     return input;
   }
 
-  Future<List<CatPhoto>> _processCatDetectionInBackground(
-    List<AssetEntity> photos,
-  ) async {
-    // Process in batches to avoid memory issues
-    const int batchSize = 50;
-    final List<CatPhoto> catPhotos = [];
+  Future<void> _warmUpModel() async {
+    if (_interpreter == null) return;
 
-    AppLogger.info(
-      'Processing ${photos.length} photos in batches of $batchSize',
-    );
+    try {
+      AppLogger.info('Warming up ML model...');
 
-    for (int i = 0; i < photos.length; i += batchSize) {
-      final int end =
-          (i + batchSize > photos.length) ? photos.length : i + batchSize;
-      final batch = photos.sublist(i, end);
-
-      AppLogger.info(
-        'Processing batch ${(i ~/ batchSize) + 1}/${(photos.length / batchSize).ceil()}',
+      // Create dummy input
+      final dummyInput = List.generate(
+        1,
+        (b) => List.generate(
+          _inputSize,
+          (h) => List.generate(_inputSize, (w) => List.filled(3, 0.0)),
+        ),
       );
 
-      final batchResults = await _processBatch(batch);
-      catPhotos.addAll(batchResults);
+      final output = List.filled(1 * 2, 0.0).reshape([1, 2]);
 
-      // Small delay to prevent overwhelming the system
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
+      // Run dummy inference
+      _interpreter!.run(dummyInput, output);
 
-    return catPhotos;
-  }
-
-  Future<List<CatPhoto>> _processBatch(List<AssetEntity> batch) async {
-    final List<CatPhoto> catPhotos = [];
-
-    for (final AssetEntity asset in batch) {
-      try {
-        // Get file path
-        final File? file = await asset.file;
-        if (file == null) continue;
-
-        // Detect cat in photo
-        final DetectionResult detection = await detectCatInPhoto(file.path);
-
-        if (detection.hasCat) {
-          final catPhoto = CatPhoto(
-            id: asset.id,
-            path: file.path,
-            fileName: asset.title ?? 'Unknown',
-            dateAdded: asset.createDateTime,
-            sizeBytes: asset.size,
-            width: asset.width,
-            height: asset.height,
-            detectionResult: detection,
-          );
-
-          catPhotos.add(catPhoto);
-          AppLogger.debug(
-            'Found cat in: ${asset.title} (confidence: ${(detection.confidence * 100).toStringAsFixed(1)}%)',
-          );
-        }
-      } catch (e) {
-        AppLogger.warning('Error processing photo ${asset.title}: $e');
-        continue;
-      }
-    }
-
-    return catPhotos;
-  }
-
-  void dispose() {
-    _interpreter?.close();
-    _interpreter = null;
-    _isModelLoaded = false;
-    _cachedCatPhotos.clear();
-    AppLogger.info('Device photo data source disposed');
-  }
-}
-
-// Background isolate for heavy processing (future enhancement)
-class _PhotoProcessingIsolate {
-  static Future<List<String>> processPhotosInIsolate(
-    List<String> photoPaths,
-  ) async {
-    final receivePort = ReceivePort();
-    await Isolate.spawn(_isolateEntryPoint, receivePort.sendPort);
-
-    final SendPort sendPort = await receivePort.first;
-    final ReceivePort responsePort = ReceivePort();
-
-    sendPort.send([photoPaths, responsePort.sendPort]);
-    final List<String> catPhotoPaths = await responsePort.first;
-
-    return catPhotoPaths;
-  }
-
-  static void _isolateEntryPoint(SendPort sendPort) async {
-    final receivePort = ReceivePort();
-    sendPort.send(receivePort.sendPort);
-
-    await for (final message in receivePort) {
-      final List<String> photoPaths = message[0];
-      final SendPort responsePort = message[1];
-
-      // Process photos here (simplified for example)
-      final List<String> catPhotos = photoPaths
-          .where(
-            (path) =>
-                path.toLowerCase().contains('cat') ||
-                path.toLowerCase().contains('kitty'),
-          )
-          .toList();
-
-      responsePort.send(catPhotos);
-      break;
+      AppLogger.info('Model warm-up complete');
+    } catch (e) {
+      AppLogger.warning('Model warm-up failed: $e');
     }
   }
 }

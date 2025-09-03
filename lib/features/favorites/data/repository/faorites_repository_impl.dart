@@ -1,6 +1,5 @@
 import 'package:cat_aloge/features/favorites/data/datasources/local_favorites_datasource.dart';
 import 'package:cat_aloge/features/favorites/domain/repositories/favorites_repository.dart';
-import 'package:cat_aloge/features/gallery/data/datasources/mock_photo_datasource.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
 
 class FavoritesRepositoryImpl implements FavoritesRepository {

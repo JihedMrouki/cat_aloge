@@ -1,5 +1,4 @@
-// lib/features/gallery/domain/entities/cat_photo.dart (Updated)
-import 'detection_result.dart';
+import 'package:cat_aloge/features/gallery/domain/entities/detection_result.dart';
 
 class CatPhoto {
   final String id;
@@ -28,7 +27,7 @@ class CatPhoto {
     this.isFavorite = false,
   });
 
-  // Factory constructors for different creation scenarios
+  // Factory constructor for device photos
   factory CatPhoto.fromDevicePhoto({
     required String id,
     required String path,
@@ -55,37 +54,14 @@ class CatPhoto {
     );
   }
 
-  factory CatPhoto.fromMockData({
-    required String id,
-    required String path,
-    String? fileName,
-    DateTime? dateAdded,
-  }) {
-    return CatPhoto(
-      id: id,
-      path: path,
-      fileName: fileName ?? 'Mock Cat Photo',
-      dateAdded: dateAdded ?? DateTime.now(),
-      sizeBytes: 0,
-      width: 800,
-      height: 600,
-      detectionResult: DetectionResult.detected(
-        confidence: 0.95,
-        boundingBoxes: const [
-          BoundingBox(x: 0.1, y: 0.1, width: 0.8, height: 0.8, label: 'cat'),
-        ],
-        processingTimeMs: 150,
-      ),
-    );
-  }
-
   // Computed properties
   double get aspectRatio => height != 0 ? width / height : 1.0;
 
   String get sizeDescription {
     if (sizeBytes < 1024) return '$sizeBytes B';
-    if (sizeBytes < 1024 * 1024)
+    if (sizeBytes < 1024 * 1024) {
       return '${(sizeBytes / 1024).toStringAsFixed(1)} KB';
+    }
     return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
@@ -139,19 +115,35 @@ class CatPhoto {
   CatPhoto toggleFavorite() => copyWith(isFavorite: !isFavorite);
 
   @override
-  List<Object?> get props => [
-    id,
-    path,
-    fileName,
-    dateAdded,
-    sizeBytes,
-    width,
-    height,
-    detectionResult,
-    lastModified,
-    mimeType,
-    isFavorite,
-  ];
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CatPhoto &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          path == other.path &&
+          fileName == other.fileName &&
+          dateAdded == other.dateAdded &&
+          sizeBytes == other.sizeBytes &&
+          width == other.width &&
+          height == other.height &&
+          detectionResult == other.detectionResult &&
+          lastModified == other.lastModified &&
+          mimeType == other.mimeType &&
+          isFavorite == other.isFavorite;
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      path.hashCode ^
+      fileName.hashCode ^
+      dateAdded.hashCode ^
+      sizeBytes.hashCode ^
+      width.hashCode ^
+      height.hashCode ^
+      detectionResult.hashCode ^
+      lastModified.hashCode ^
+      mimeType.hashCode ^
+      isFavorite.hashCode;
 
   @override
   String toString() {

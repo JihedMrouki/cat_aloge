@@ -1,4 +1,5 @@
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
+import 'package:cat_aloge/features/gallery/domain/entities/detection_result.dart';
 import 'package:cat_aloge/features/gallery/domain/repository/gallery_repository.dart';
 
 class DetectCatsInPhoto {

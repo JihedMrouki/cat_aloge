@@ -5,17 +5,42 @@ class DetectionResult {
   final int processingTimeMs;
   final DateTime detectedAt;
 
-  const DetectionResult({
+  DetectionResult({
     required this.hasCat,
     required this.confidence,
     required this.boundingBoxes,
     required this.processingTimeMs,
     DateTime? detectedAt,
-  }) : detectedAt = detectedAt ?? DetectionResult._defaultDateTime();
+  }) : detectedAt = detectedAt ?? DateTime.now();
 
-  DetectionResult._defaultDateTime() : detectedAt = null;
+  // --- MANUAL JSON CONVERSION ---
 
-  // Factory for creating detection results
+  /// Creates a DetectionResult instance from a JSON map.
+  factory DetectionResult.fromJson(Map<String, dynamic> json) {
+    return DetectionResult(
+      hasCat: json['hasCat'] as bool,
+      confidence: (json['confidence'] as num).toDouble(),
+      boundingBoxes: (json['boundingBoxes'] as List<dynamic>)
+          .map((item) => BoundingBox.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      processingTimeMs: json['processingTimeMs'] as int,
+      detectedAt: DateTime.parse(json['detectedAt'] as String),
+    );
+  }
+
+  /// Converts this DetectionResult instance to a JSON map.
+  Map<String, dynamic> toJson() {
+    return {
+      'hasCat': hasCat,
+      'confidence': confidence,
+      'boundingBoxes': boundingBoxes.map((box) => box.toJson()).toList(),
+      'processingTimeMs': processingTimeMs,
+      'detectedAt': detectedAt.toIso8601String(),
+    };
+  }
+
+  // --- EXISTING FACTORIES & HELPERS ---
+
   factory DetectionResult.detected({
     required double confidence,
     required List<BoundingBox> boundingBoxes,
@@ -40,7 +65,6 @@ class DetectionResult {
     );
   }
 
-  // Confidence level helpers
   ConfidenceLevel get confidenceLevel {
     if (confidence >= 0.9) return ConfidenceLevel.high;
     if (confidence >= 0.7) return ConfidenceLevel.medium;
@@ -61,7 +85,6 @@ class DetectionResult {
     }
   }
 
-  // Performance metrics
   String get performanceDescription {
     if (processingTimeMs < 100) return 'Very fast';
     if (processingTimeMs < 500) return 'Fast';
@@ -70,32 +93,32 @@ class DetectionResult {
   }
 
   @override
-  List<Object?> get props => [
-    hasCat,
-    confidence,
-    boundingBoxes,
-    processingTimeMs,
-    detectedAt,
-  ];
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DetectionResult &&
+          runtimeType == other.runtimeType &&
+          hasCat == other.hasCat &&
+          confidence == other.confidence &&
+          boundingBoxes == other.boundingBoxes &&
+          processingTimeMs == other.processingTimeMs &&
+          detectedAt == other.detectedAt;
 
   @override
-  String toString() {
-    return 'DetectionResult('
-        'hasCat: $hasCat, '
-        'confidence: ${(confidence * 100).toStringAsFixed(1)}%, '
-        'boxes: ${boundingBoxes.length}, '
-        'time: ${processingTimeMs}ms'
-        ')';
-  }
+  int get hashCode =>
+      hasCat.hashCode ^
+      confidence.hashCode ^
+      boundingBoxes.hashCode ^
+      processingTimeMs.hashCode ^
+      detectedAt.hashCode;
 }
 
 class BoundingBox {
-  final double x; // Normalized 0.0 - 1.0
-  final double y; // Normalized 0.0 - 1.0
-  final double width; // Normalized 0.0 - 1.0
-  final double height; // Normalized 0.0 - 1.0
-  final String? label; // Optional label (e.g., "cat", "kitten")
-  final double? labelConfidence; // Confidence for the specific label
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final String? label;
+  final double? labelConfidence;
 
   const BoundingBox({
     required this.x,
@@ -106,59 +129,57 @@ class BoundingBox {
     this.labelConfidence,
   });
 
-  // Convert normalized coordinates to actual pixel coordinates
-  BoundingBox toPixelCoordinates(int imageWidth, int imageHeight) {
+  // --- MANUAL JSON CONVERSION ---
+
+  /// Creates a BoundingBox instance from a JSON map.
+  factory BoundingBox.fromJson(Map<String, dynamic> json) {
     return BoundingBox(
-      x: x * imageWidth,
-      y: y * imageHeight,
-      width: width * imageWidth,
-      height: height * imageHeight,
-      label: label,
-      labelConfidence: labelConfidence,
+      x: (json['x'] as num).toDouble(),
+      y: (json['y'] as num).toDouble(),
+      width: (json['width'] as num).toDouble(),
+      height: (json['height'] as num).toDouble(),
+      label: json['label'] as String?,
+      labelConfidence: (json['labelConfidence'] as num?)?.toDouble(),
     );
   }
 
-  // Get center point of bounding box
-  ({double x, double y}) get center => (x: x + width / 2, y: y + height / 2);
+  /// Converts this BoundingBox instance to a JSON map.
+  Map<String, dynamic> toJson() {
+    return {
+      'x': x,
+      'y': y,
+      'width': width,
+      'height': height,
+      'label': label,
+      'labelConfidence': labelConfidence,
+    };
+  }
 
-  // Get area of bounding box
+  // --- EXISTING HELPERS ---
+
+  ({double x, double y}) get center => (x: x + width / 2, y: y + height / 2);
   double get area => width * height;
 
-  // Check if this bounding box overlaps with another
-  bool overlapsWith(BoundingBox other, {double threshold = 0.5}) {
-    final overlapArea = _calculateOverlapArea(other);
-    final unionArea = area + other.area - overlapArea;
-    return (overlapArea / unionArea) >= threshold;
-  }
-
-  double _calculateOverlapArea(BoundingBox other) {
-    final left = x > other.x ? x : other.x;
-    final right = (x + width) < (other.x + other.width)
-        ? (x + width)
-        : (other.x + other.width);
-    final top = y > other.y ? y : other.y;
-    final bottom = (y + height) < (other.y + other.height)
-        ? (y + height)
-        : (other.y + other.height);
-
-    if (left >= right || top >= bottom) return 0.0;
-    return (right - left) * (bottom - top);
-  }
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BoundingBox &&
+          runtimeType == other.runtimeType &&
+          x == other.x &&
+          y == other.y &&
+          width == other.width &&
+          height == other.height &&
+          label == other.label &&
+          labelConfidence == other.labelConfidence;
 
   @override
-  List<Object?> get props => [x, y, width, height, label, labelConfidence];
-
-  @override
-  String toString() {
-    return 'BoundingBox('
-        'x: ${x.toStringAsFixed(3)}, '
-        'y: ${y.toStringAsFixed(3)}, '
-        'w: ${width.toStringAsFixed(3)}, '
-        'h: ${height.toStringAsFixed(3)}'
-        '${label != null ? ', label: $label' : ''}'
-        '${labelConfidence != null ? ', conf: ${(labelConfidence! * 100).toStringAsFixed(1)}%' : ''}'
-        ')';
-  }
+  int get hashCode =>
+      x.hashCode ^
+      y.hashCode ^
+      width.hashCode ^
+      height.hashCode ^
+      label.hashCode ^
+      labelConfidence.hashCode;
 }
 
 enum ConfidenceLevel { veryLow, low, medium, high }

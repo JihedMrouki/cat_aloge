@@ -31,7 +31,6 @@ class HiveFavoritesDataSource implements FavoritesDataSource {
       );
       return List<String>.from(favoriteIds);
     } catch (e) {
-      print('Error getting favorite IDs: $e');
       return <String>[];
     }
   }
@@ -45,7 +44,6 @@ class HiveFavoritesDataSource implements FavoritesDataSource {
         await _favoritesBox.put(_favoritesKey, currentFavorites);
       }
     } catch (e) {
-      print('Error adding favorite: $e');
       throw Exception('Failed to add favorite: $e');
     }
   }
@@ -57,7 +55,6 @@ class HiveFavoritesDataSource implements FavoritesDataSource {
       currentFavorites.remove(photoId);
       await _favoritesBox.put(_favoritesKey, currentFavorites);
     } catch (e) {
-      print('Error removing favorite: $e');
       throw Exception('Failed to remove favorite: $e');
     }
   }
@@ -68,7 +65,6 @@ class HiveFavoritesDataSource implements FavoritesDataSource {
       final favoriteIds = await getFavoriteIds();
       return favoriteIds.contains(photoId);
     } catch (e) {
-      print('Error checking if favorite: $e');
       return false;
     }
   }
@@ -85,7 +81,6 @@ class HiveFavoritesDataSource implements FavoritesDataSource {
         return true;
       }
     } catch (e) {
-      print('Error toggling favorite: $e');
       rethrow;
     }
   }
@@ -96,7 +91,6 @@ class HiveFavoritesDataSource implements FavoritesDataSource {
       final favoriteIds = await getFavoriteIds();
       return favoriteIds.length;
     } catch (e) {
-      print('Error getting favorites count: $e');
       return 0;
     }
   }
@@ -106,7 +100,6 @@ class HiveFavoritesDataSource implements FavoritesDataSource {
     try {
       await _favoritesBox.put(_favoritesKey, <String>[]);
     } catch (e) {
-      print('Error clearing favorites: $e');
       throw Exception('Failed to clear favorites: $e');
     }
   }
@@ -121,7 +114,6 @@ class HiveFavoritesDataSource implements FavoritesDataSource {
         'exportedAt': DateTime.now().toIso8601String(),
       };
     } catch (e) {
-      print('Error exporting favorites: $e');
       return {};
     }
   }
@@ -131,7 +123,6 @@ class HiveFavoritesDataSource implements FavoritesDataSource {
     try {
       await _favoritesBox.put(_favoritesKey, favoriteIds);
     } catch (e) {
-      print('Error importing favorites: $e');
       throw Exception('Failed to import favorites: $e');
     }
   }

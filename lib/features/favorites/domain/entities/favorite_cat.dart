@@ -1,4 +1,6 @@
-class FavoriteCat {
+import 'package:equatable/equatable.dart';
+
+class FavoriteCat extends Equatable {
   final String id;
   final String catPhotoId;
   final String name;

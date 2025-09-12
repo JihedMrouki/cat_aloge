@@ -1,21 +1,23 @@
-// import 'package:cat_aloge/features/favorites/domain/repositories/favorites_repository.dart';
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cat_aloge/features/favorites/domain/repositories/favorites_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// class RemoveFromFavorites {
-//   final FavoritesRepository _repository;
+import '../../data/repository/faorites_repository_impl.dart';
 
-//   RemoveFromFavorites(this._repository);
+class RemoveFromFavorites {
+  final FavoritesRepository _repository;
 
-//   Future<void> call(String catPhotoId) async {
-//     try {
-//       await _repository.removeFromFavorites(catPhotoId);
-//     } catch (e) {
-//       throw Exception('Failed to remove from favorites: $e');
-//     }
-//   }
-// }
+  RemoveFromFavorites(this._repository);
 
-// final removeFromFavoritesProvider = Provider<RemoveFromFavorites>((ref) {
-//   final repository = ref.read(favoritesRepositoryProvider);
-//   return RemoveFromFavorites(repository);
-// });
+  Future<void> call(String catPhotoId) async {
+    try {
+      await _repository.removeFromFavorites(catPhotoId);
+    } catch (e) {
+      throw Exception('Failed to remove from favorites: $e');
+    }
+  }
+}
+
+final removeFromFavoritesProvider = Provider<RemoveFromFavorites>((ref) {
+  final repository = ref.read(favoritesRepositoryProvider);
+  return RemoveFromFavorites(repository);
+});

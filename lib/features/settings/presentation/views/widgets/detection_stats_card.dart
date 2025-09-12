@@ -60,7 +60,7 @@ class DetectionStatsCard extends ConsumerWidget {
               Container(
                 width: 1,
                 height: 40,
-                color: AppColors.gray500.withOpacity(0.3),
+                color: AppColors.gray500.withAlpha(76),
               ),
               Expanded(
                 child: _buildStatItem(
@@ -72,7 +72,7 @@ class DetectionStatsCard extends ConsumerWidget {
               Container(
                 width: 1,
                 height: 40,
-                color: AppColors.gray500.withOpacity(0.3),
+                color: AppColors.gray500.withAlpha(76),
               ),
               Expanded(
                 child: _buildStatItem(
@@ -90,7 +90,7 @@ class DetectionStatsCard extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.surface.withOpacity(0.5),
+              color: AppColors.surface.withAlpha(127),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(

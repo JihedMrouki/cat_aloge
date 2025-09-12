@@ -1,55 +1,97 @@
-class DetectionResult {
+// lib/features/gallery/domain/entities/detection_result.dart
+import 'package:equatable/equatable.dart';
+
+enum ConfidenceLevel {
+  veryLow,
+  low,
+  medium,
+  high,
+  veryHigh;
+
+  static ConfidenceLevel fromConfidence(double confidence) {
+    if (confidence >= 0.9) return ConfidenceLevel.veryHigh;
+    if (confidence >= 0.75) return ConfidenceLevel.high;
+    if (confidence >= 0.5) return ConfidenceLevel.medium;
+    if (confidence >= 0.25) return ConfidenceLevel.low;
+    return ConfidenceLevel.veryLow;
+  }
+
+  String get displayName {
+    switch (this) {
+      case ConfidenceLevel.veryLow:
+        return 'Very Low';
+      case ConfidenceLevel.low:
+        return 'Low';
+      case ConfidenceLevel.medium:
+        return 'Medium';
+      case ConfidenceLevel.high:
+        return 'High';
+      case ConfidenceLevel.veryHigh:
+        return 'Very High';
+    }
+  }
+}
+
+class DetectionResult extends Equatable {
   final bool hasCat;
   final double confidence;
   final List<BoundingBox> boundingBoxes;
   final int processingTimeMs;
-  final String? error;
+  final DateTime detectedAt;
 
-  const DetectionResult({
+  DetectionResult({
     required this.hasCat,
     required this.confidence,
     required this.boundingBoxes,
     required this.processingTimeMs,
-    this.error,
-  });
+    DateTime? detectedAt,
+  }) : detectedAt = detectedAt ?? DateTime.now();
 
-  factory DetectionResult.error(String error, int processingTimeMs) {
+  ConfidenceLevel get confidenceLevel =>
+      ConfidenceLevel.fromConfidence(confidence);
+
+  double get confidencePercentage => confidence * 100;
+
+  String get confidenceText => '${confidencePercentage.toStringAsFixed(1)}%';
+
+  String get processingTimeText => '${processingTimeMs}ms';
+
+  // JSON serialization
+  factory DetectionResult.fromJson(Map<String, dynamic> json) {
     return DetectionResult(
-      hasCat: false,
-      confidence: 0.0,
-      boundingBoxes: const [],
-      processingTimeMs: processingTimeMs,
-      error: error,
+      hasCat: json['hasCat'] as bool,
+      confidence: (json['confidence'] as num).toDouble(),
+      boundingBoxes: (json['boundingBoxes'] as List<dynamic>)
+          .map((item) => BoundingBox.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      processingTimeMs: json['processingTimeMs'] as int,
+      detectedAt: DateTime.parse(json['detectedAt'] as String),
     );
   }
 
-  factory DetectionResult.noCat(int processingTimeMs) {
-    return DetectionResult(
-      hasCat: false,
-      confidence: 0.0,
-      boundingBoxes: const [],
-      processingTimeMs: processingTimeMs,
-    );
+  Map<String, dynamic> toJson() {
+    return {
+      'hasCat': hasCat,
+      'confidence': confidence,
+      'boundingBoxes': boundingBoxes.map((box) => box.toJson()).toList(),
+      'processingTimeMs': processingTimeMs,
+      'detectedAt': detectedAt.toIso8601String(),
+    };
   }
-
-  bool get hasError => error != null;
-
-  String get confidencePercentage =>
-      '${(confidence * 100).toStringAsFixed(1)}%';
 
   DetectionResult copyWith({
     bool? hasCat,
     double? confidence,
     List<BoundingBox>? boundingBoxes,
     int? processingTimeMs,
-    String? error,
+    DateTime? detectedAt,
   }) {
     return DetectionResult(
       hasCat: hasCat ?? this.hasCat,
       confidence: confidence ?? this.confidence,
       boundingBoxes: boundingBoxes ?? this.boundingBoxes,
       processingTimeMs: processingTimeMs ?? this.processingTimeMs,
-      error: error ?? this.error,
+      detectedAt: detectedAt ?? this.detectedAt,
     );
   }
 
@@ -59,22 +101,21 @@ class DetectionResult {
     confidence,
     boundingBoxes,
     processingTimeMs,
-    error,
+    detectedAt,
   ];
 
   @override
   String toString() {
     return 'DetectionResult{'
         'hasCat: $hasCat, '
-        'confidence: $confidencePercentage, '
+        'confidence: $confidenceText, '
         'boundingBoxes: ${boundingBoxes.length}, '
-        'processingTime: ${processingTimeMs}ms'
-        '${hasError ? ', error: $error' : ''}'
+        'processingTime: $processingTimeText'
         '}';
   }
 }
 
-class BoundingBox {
+class BoundingBox extends Equatable {
   final double x;
   final double y;
   final double width;
@@ -91,38 +132,27 @@ class BoundingBox {
     this.labelConfidence,
   });
 
-  // Convert normalized coordinates to pixel coordinates
-  BoundingBox toPixelCoordinates(int imageWidth, int imageHeight) {
+  // JSON serialization
+  factory BoundingBox.fromJson(Map<String, dynamic> json) {
     return BoundingBox(
-      x: x * imageWidth,
-      y: y * imageHeight,
-      width: width * imageWidth,
-      height: height * imageHeight,
-      label: label,
-      labelConfidence: labelConfidence,
+      x: (json['x'] as num).toDouble(),
+      y: (json['y'] as num).toDouble(),
+      width: (json['width'] as num).toDouble(),
+      height: (json['height'] as num).toDouble(),
+      label: json['label'] as String?,
+      labelConfidence: (json['labelConfidence'] as num?)?.toDouble(),
     );
   }
 
-  // Convert pixel coordinates to normalized coordinates
-  BoundingBox toNormalizedCoordinates(int imageWidth, int imageHeight) {
-    return BoundingBox(
-      x: x / imageWidth,
-      y: y / imageHeight,
-      width: width / imageWidth,
-      height: height / imageHeight,
-      label: label,
-      labelConfidence: labelConfidence,
-    );
-  }
-
-  double get centerX => x + (width / 2);
-  double get centerY => y + (height / 2);
-  double get area => width * height;
-
-  String? get labelWithConfidence {
-    if (label == null) return null;
-    if (labelConfidence == null) return label;
-    return '$label (${(labelConfidence! * 100).toStringAsFixed(1)}%)';
+  Map<String, dynamic> toJson() {
+    return {
+      'x': x,
+      'y': y,
+      'width': width,
+      'height': height,
+      'label': label,
+      'labelConfidence': labelConfidence,
+    };
   }
 
   BoundingBox copyWith({
@@ -149,11 +179,10 @@ class BoundingBox {
   @override
   String toString() {
     return 'BoundingBox{'
-        'x: ${x.toStringAsFixed(3)}, '
-        'y: ${y.toStringAsFixed(3)}, '
-        'width: ${width.toStringAsFixed(3)}, '
-        'height: ${height.toStringAsFixed(3)}'
-        '${labelWithConfidence != null ? ', label: $labelWithConfidence' : ''}'
+        'x: $x, y: $y, '
+        'width: $width, height: $height, '
+        'label: $label, '
+        'confidence: ${labelConfidence?.toStringAsFixed(2)}'
         '}';
   }
 }

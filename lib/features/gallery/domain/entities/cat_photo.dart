@@ -1,6 +1,7 @@
 import 'package:cat_aloge/features/gallery/domain/entities/detection_result.dart';
+import 'package:equatable/equatable.dart';
 
-class CatPhoto {
+class CatPhoto extends Equatable {
   final String id;
   final String path;
   final String fileName;
@@ -8,9 +9,10 @@ class CatPhoto {
   final int sizeBytes;
   final int width;
   final int height;
-  final DetectionResult detectionResult;
+  final DetectionResult? detectionResult;
   final DateTime? lastModified;
   final String? mimeType;
+  final bool isFavorite;
 
   const CatPhoto({
     required this.id,
@@ -20,9 +22,10 @@ class CatPhoto {
     required this.sizeBytes,
     required this.width,
     required this.height,
-    required this.detectionResult,
+    this.detectionResult,
     this.lastModified,
     this.mimeType,
+    this.isFavorite = false,
   });
 
   factory CatPhoto.fromDevicePhoto({
@@ -33,9 +36,10 @@ class CatPhoto {
     required int sizeBytes,
     required int width,
     required int height,
-    required DetectionResult detectionResult,
+    DetectionResult? detectionResult,
     DateTime? lastModified,
     String? mimeType,
+    bool isFavorite = false,
   }) {
     return CatPhoto(
       id: id,
@@ -48,6 +52,7 @@ class CatPhoto {
       detectionResult: detectionResult,
       lastModified: lastModified,
       mimeType: mimeType,
+      isFavorite: isFavorite,
     );
   }
 
@@ -68,11 +73,11 @@ class CatPhoto {
   }
 
   String get resolutionFormatted {
-    return '${width}x${height}';
+    return '${width}x$height';
   }
 
   double get confidencePercentage {
-    return detectionResult.confidence * 100;
+    return (detectionResult?.confidence ?? 0.0) * 100;
   }
 
   CatPhoto copyWith({
@@ -86,6 +91,7 @@ class CatPhoto {
     DetectionResult? detectionResult,
     DateTime? lastModified,
     String? mimeType,
+    bool? isFavorite,
   }) {
     return CatPhoto(
       id: id ?? this.id,
@@ -98,6 +104,7 @@ class CatPhoto {
       detectionResult: detectionResult ?? this.detectionResult,
       lastModified: lastModified ?? this.lastModified,
       mimeType: mimeType ?? this.mimeType,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 
@@ -113,6 +120,7 @@ class CatPhoto {
     detectionResult,
     lastModified,
     mimeType,
+    isFavorite,
   ];
 
   @override
@@ -122,7 +130,8 @@ class CatPhoto {
         'fileName: $fileName, '
         'confidence: ${confidencePercentage.toStringAsFixed(1)}%, '
         'size: $fileSizeFormatted, '
-        'resolution: $resolutionFormatted'
+        'resolution: $resolutionFormatted, '
+        'isFavorite: $isFavorite'
         '}';
   }
 }

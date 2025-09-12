@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+.gemini/
+gha-creds-*.json
+
+# Gemini Cli related
+cat_aloge.md
+context.md
+gemini.md

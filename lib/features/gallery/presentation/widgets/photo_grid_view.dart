@@ -1,6 +1,6 @@
+import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../state/gallery_state.dart';
 import 'cat_grid_item.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/extensions/context_extensions.dart';

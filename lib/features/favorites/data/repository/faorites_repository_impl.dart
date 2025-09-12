@@ -1,6 +1,11 @@
 import 'package:cat_aloge/features/favorites/data/datasources/local_favorites_datasource.dart';
 import 'package:cat_aloge/features/favorites/domain/repositories/favorites_repository.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+abstract class PhotoDataSource {
+  Future<List<CatPhoto>> getPhotos();
+}
 
 class FavoritesRepositoryImpl implements FavoritesRepository {
   final FavoritesDataSource _favoritesDataSource;
@@ -19,7 +24,7 @@ class FavoritesRepositoryImpl implements FavoritesRepository {
 
     return allPhotos
         .where((photo) => favoriteIdsSet.contains(photo.id))
-        .map((photoModel) => photoModel.copyWith(isFavorite: true).toEntity())
+        .map((photo) => photo.copyWith(isFavorite: true))
         .toList();
   }
 
@@ -57,3 +62,18 @@ class FavoritesRepositoryImpl implements FavoritesRepository {
     return favoriteIds.length;
   }
 }
+
+final favoritesRepositoryProvider = Provider<FavoritesRepository>((ref) {
+  final favoritesDataSource = ref.watch(favoritesDataSourceProvider);
+  final photoDataSource = ref.watch(photoDataSourceProvider);
+  return FavoritesRepositoryImpl(favoritesDataSource, photoDataSource);
+});
+
+final favoritesDataSourceProvider = Provider<FavoritesDataSource>((ref) {
+  return LocalFavoritesDataSource();
+});
+
+final photoDataSourceProvider = Provider<PhotoDataSource>((ref) {
+  // This should be implemented in the gallery feature
+  throw UnimplementedError();
+});

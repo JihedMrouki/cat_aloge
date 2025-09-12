@@ -1,73 +1,76 @@
-// import 'package:cat_aloge/features/favorites/domain/entities/favorite_cat.dart';
-// import 'package:hive/hive.dart';
+import 'package:cat_aloge/features/favorites/domain/entities/favorite_cat.dart';
+import 'package:hive/hive.dart';
+import 'package:json_annotation/json_annotation.dart';
 
-// @HiveType(typeId: 0)
-// @JsonSerializable()
-// class FavoriteCatModel extends FavoriteCat {
-//   @HiveField(0)
-//   @override
-//   final String id;
+part 'favorite_cat_model.g.dart';
 
-//   @HiveField(1)
-//   @override
-//   final String catPhotoId;
+@HiveType(typeId: 0)
+@JsonSerializable()
+class FavoriteCatModel extends FavoriteCat {
+  @HiveField(0)
+  @override
+  final String id;
 
-//   @HiveField(2)
-//   @override
-//   final String name;
+  @HiveField(1)
+  @override
+  final String catPhotoId;
 
-//   @HiveField(3)
-//   @override
-//   final String imagePath;
+  @override
+  @HiveField(2)
+  final String name;
 
-//   @HiveField(4)
-//   @override
-//   final DateTime dateAdded;
+  @HiveField(3)
+  @override
+  final String imagePath;
 
-//   @HiveField(5)
-//   @override
-//   final String? notes;
+  @HiveField(4)
+  @override
+  final DateTime dateAdded;
 
-//   const FavoriteCatModel({
-//     required this.id,
-//     required this.catPhotoId,
-//     required this.name,
-//     required this.imagePath,
-//     required this.dateAdded,
-//     this.notes,
-//   }) : super(
-//          id: id,
-//          catPhotoId: catPhotoId,
-//          name: name,
-//          imagePath: imagePath,
-//          dateAdded: dateAdded,
-//          notes: notes,
-//        );
+  @HiveField(5)
+  @override
+  final String? notes;
 
-//   factory FavoriteCatModel.fromJson(Map<String, dynamic> json) =>
-//       _$FavoriteCatModelFromJson(json);
+  const FavoriteCatModel({
+    required this.id,
+    required this.catPhotoId,
+    required this.name,
+    required this.imagePath,
+    required this.dateAdded,
+    this.notes,
+  }) : super(
+         id: id,
+         catPhotoId: catPhotoId,
+         name: name,
+         imagePath: imagePath,
+         dateAdded: dateAdded,
+         notes: notes,
+       );
 
-//   Map<String, dynamic> toJson() => _$FavoriteCatModelToJson(this);
+  factory FavoriteCatModel.fromJson(Map<String, dynamic> json) =>
+      _$FavoriteCatModelFromJson(json);
 
-//   factory FavoriteCatModel.fromEntity(FavoriteCat entity) {
-//     return FavoriteCatModel(
-//       id: entity.id,
-//       catPhotoId: entity.catPhotoId,
-//       name: entity.name,
-//       imagePath: entity.imagePath,
-//       dateAdded: entity.dateAdded,
-//       notes: entity.notes,
-//     );
-//   }
+  Map<String, dynamic> toJson() => _$FavoriteCatModelToJson(this);
 
-//   FavoriteCat toEntity() {
-//     return FavoriteCat(
-//       id: id,
-//       catPhotoId: catPhotoId,
-//       name: name,
-//       imagePath: imagePath,
-//       dateAdded: dateAdded,
-//       notes: notes,
-//     );
-//   }
-// }
+  factory FavoriteCatModel.fromEntity(FavoriteCat entity) {
+    return FavoriteCatModel(
+      id: entity.id,
+      catPhotoId: entity.catPhotoId,
+      name: entity.name,
+      imagePath: entity.imagePath,
+      dateAdded: entity.dateAdded,
+      notes: entity.notes,
+    );
+  }
+
+  FavoriteCat toEntity() {
+    return FavoriteCat(
+      id: id,
+      catPhotoId: catPhotoId,
+      name: name,
+      imagePath: imagePath,
+      dateAdded: dateAdded,
+      notes: notes,
+    );
+  }
+}

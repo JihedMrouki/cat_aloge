@@ -1,39 +1,4 @@
-// Simple data models for our state
-class CatPhoto {
-  final String id;
-  final String path;
-  final String name;
-  final DateTime dateAdded;
-  final bool isFavorite;
-  final double? confidence;
-
-  const CatPhoto({
-    required this.id,
-    required this.path,
-    required this.name,
-    required this.dateAdded,
-    this.isFavorite = false,
-    this.confidence,
-  });
-
-  CatPhoto copyWith({
-    String? id,
-    String? path,
-    String? name,
-    DateTime? dateAdded,
-    bool? isFavorite,
-    double? confidence,
-  }) {
-    return CatPhoto(
-      id: id ?? this.id,
-      path: path ?? this.path,
-      name: name ?? this.name,
-      dateAdded: dateAdded ?? this.dateAdded,
-      isFavorite: isFavorite ?? this.isFavorite,
-      confidence: confidence ?? this.confidence,
-    );
-  }
-}
+import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
 
 enum GalleryStatus { initial, loading, loaded, error }
 

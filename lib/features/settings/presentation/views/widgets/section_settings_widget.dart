@@ -42,7 +42,7 @@ class SettingsSection extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.gray500.withOpacity(0.1)),
+            border: Border.all(color: AppColors.gray500.withAlpha(25)),
           ),
           child: Column(
             children: [

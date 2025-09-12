@@ -1,7 +1,7 @@
+import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
 import 'package:cat_aloge/features/gallery/presentation/providers/gallery_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../state/gallery_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/extensions/context_extensions.dart';
@@ -103,7 +103,7 @@ class CatGridItem extends ConsumerWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+            colors: [Colors.transparent, Colors.black.withAlpha(178)],
           ),
         ),
         child: Column(
@@ -111,7 +111,7 @@ class CatGridItem extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              photo.name,
+              photo.fileName,
               style: context.textTheme.titleSmall?.copyWith(
                 color: AppColors.surface,
                 fontWeight: FontWeight.w600,
@@ -119,20 +119,20 @@ class CatGridItem extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            if (photo.confidence != null) ...[
+            if (photo.detectionResult != null) ...[
               const SizedBox(height: 2),
               Row(
                 children: [
                   Icon(
                     Icons.visibility,
                     size: 12,
-                    color: AppColors.surface.withOpacity(0.8),
+                    color: AppColors.surface.withAlpha(204),
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${(photo.confidence! * 100).toInt()}% cat',
+                    '${(photo.detectionResult!.confidence * 100).toInt()}% cat',
                     style: context.textTheme.bodySmall?.copyWith(
-                      color: AppColors.surface.withOpacity(0.8),
+                      color: AppColors.surface.withAlpha(204),
                       fontSize: 10,
                     ),
                   ),

@@ -3,7 +3,6 @@ abstract class Failure {
 
   const Failure(this.message);
 
-  @override
   List<Object> get props => [message];
 }
 

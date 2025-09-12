@@ -3,6 +3,7 @@ import 'package:cat_aloge/features/gallery/domain/entities/detection_result.dart
 class DetectionResultModel extends DetectionResult {
   // Overriding the list to be of the Model type for easier serialization.
   @override
+  @override
   final List<BoundingBoxModel> boundingBoxes;
 
   DetectionResultModel({

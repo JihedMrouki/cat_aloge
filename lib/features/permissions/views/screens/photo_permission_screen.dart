@@ -262,7 +262,7 @@ class _PermissionRequestView extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withAlpha(25),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Icon(icon, size: 20, color: AppColors.primary),

@@ -61,7 +61,7 @@ dependencies:
   path_provider: ^2.1.2
   
   # Sharing & Utils
-  share_plus: ^11.1.0
+  share_plus: ^12.0.0
   uuid: ^4.3.3
   
   # HTTP & JSON
@@ -109,9 +109,9 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/
+    - assets/local_ml_model/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

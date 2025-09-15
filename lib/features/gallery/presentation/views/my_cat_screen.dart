@@ -64,8 +64,9 @@ class MyCatsScreen extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stackTrace) => Center(child: Text(error.toString())),
       data: (photos) {
-        if (photos.isEmpty)
+        if (photos.isEmpty) {
           return const Center(child: Text('No cat photos found.'));
+        }
         return RefreshIndicator(
           onRefresh: () => ref.read(galleryProvider.notifier).refreshPhotos(),
           child: _PhotoGridView(

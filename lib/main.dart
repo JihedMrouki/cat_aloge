@@ -87,14 +87,18 @@ class _InitializationScreen extends StatelessWidget {
           children: [
             Icon(Icons.pets, size: 80, color: Colors.purple),
             SizedBox(height: 24),
-            Text('Cat Gallery',
-                style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.purple)),
+            Text(
+              'Cat Gallery',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,
+              ),
+            ),
             SizedBox(height: 16),
             CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.purple)),
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+            ),
           ],
         ),
       ),
@@ -118,15 +122,20 @@ class _ErrorScreen extends StatelessWidget {
             children: [
               const Icon(Icons.error_outline, size: 80, color: Colors.red),
               const SizedBox(height: 24),
-              const Text('Initialization Error',
-                  style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red)),
+              const Text(
+                'Initialization Error',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
               const SizedBox(height: 16),
-              Text('Failed to start the app:\n$error',
-                  style: const TextStyle(fontSize: 16),
-                  textAlign: TextAlign.center),
+              Text(
+                'Failed to start the app:\n$error',
+                style: const TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),

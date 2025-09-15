@@ -1,63 +1,70 @@
 import 'package:cat_aloge/features/gallery/data/datasources/device_photo_datasource.dart';
-import 'package:cat_aloge/features/gallery/data/repository/gallery_repository_impl.dart';
+import 'package:cat_aloge/features/gallery/data/repositories/gallery_repository_impl.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
-import 'package:cat_aloge/features/gallery/domain/repository/gallery_repository.dart';
+import 'package:cat_aloge/features/gallery/domain/repositories/gallery_repository.dart';
 import 'package:cat_aloge/features/gallery/domain/usecases/get_cat_photos.dart';
 import 'package:cat_aloge/features/gallery/domain/usecases/refresh_gallery.dart';
-import 'package:cat_aloge/features/gallery/presentation/notifiers/gallery_notifier.dart';
+import 'package:cat_aloge/features/permissions/presentation/providers/permission_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cat_aloge/features/permissions/domain/usecases/check_photo_permission.dart';
-import 'package:cat_aloge/features/permissions/domain/usecases/request_photo_permission.dart';
-import 'package:cat_aloge/features/permissions/views/providers/permission_providers.dart';
 
-// --- DATA LAYER PROVIDERS ---
-
-// Datasource Provider (Singleton)
-final devicePhotoDataSourceProvider = Provider<DevicePhotoDataSource>((ref) {
+final photoDataSourceProvider = Provider<DevicePhotoDataSource>((ref) {
   final checkPhotoPermissionUseCase = ref.watch(checkPhotoPermissionUseCaseProvider);
   final requestPhotoPermissionUseCase = ref.watch(requestPhotoPermissionUseCaseProvider);
-  return DevicePhotoDataSourceImpl(
-    checkPhotoPermissionUseCase,
-    requestPhotoPermissionUseCase,
+  return DevicePhotoDataSourceImpl(checkPhotoPermissionUseCase, requestPhotoPermissionUseCase);
+});
+
+final galleryRepositoryProvider = Provider<GalleryRepository>((ref) {
+  return GalleryRepositoryImpl(
+    photoDataSource: ref.watch(photoDataSourceProvider),
   );
 });
 
-// Repository Provider
-final galleryRepositoryProvider = Provider<GalleryRepository>((ref) {
-  final dataSource = ref.watch(devicePhotoDataSourceProvider);
-  return GalleryRepositoryImpl(dataSource);
+final getCatPhotosUsecaseProvider = Provider<GetCatPhotosUseCase>((ref) {
+  return GetCatPhotosUseCase(ref.watch(galleryRepositoryProvider));
 });
 
-// --- DOMAIN LAYER (USECASES) PROVIDERS ---
-
-final getCatPhotosUsecaseProvider = Provider<GetCatPhotos>((ref) {
-  final repository = ref.watch(galleryRepositoryProvider);
-  return GetCatPhotos(repository);
+final refreshGalleryUsecaseProvider = Provider<RefreshGalleryUseCase>((ref) {
+  return RefreshGalleryUseCase(ref.watch(galleryRepositoryProvider));
 });
 
-final refreshGalleryUsecaseProvider = Provider<RefreshGallery>((ref) {
-  final repository = ref.watch(galleryRepositoryProvider);
-  return RefreshGallery(repository);
-});
-
-// --- PRESENTATION LAYER (STATE NOTIFIER) PROVIDER ---
-
-final galleryProvider =
-    AsyncNotifierProvider<GalleryNotifier, List<CatPhoto>>(GalleryNotifier.new);
-
-// --- DERIVED PROVIDERS (SELECTORS) FOR UI ---
-
-/// Provides just the list of photos from the main gallery provider.
-final photosProvider = Provider<List<CatPhoto>>((ref) {
-  return ref.watch(galleryProvider).asData?.value ?? [];
-});
-
-/// Provides the total count of cat photos.
 final photoCountProvider = Provider<int>((ref) {
-  return ref.watch(photosProvider).length;
+  return 0; // Placeholder
 });
 
-/// Provides the count of favorite photos.
-final favoriteCountProvider = Provider<int>((ref) {
-  return ref.watch(photosProvider).where((p) => p.isFavorite).length;
+final galleryProvider = StateNotifierProvider<GalleryNotifier, AsyncValue<List<CatPhoto>>>((ref) {
+  return GalleryNotifier(ref.read(getCatPhotosUsecaseProvider), ref.read(refreshGalleryUsecaseProvider));
 });
+
+class GalleryNotifier extends StateNotifier<AsyncValue<List<CatPhoto>>> {
+  final GetCatPhotosUseCase _getCatPhotosUseCase;
+  final RefreshGalleryUseCase _refreshGalleryUseCase;
+
+  GalleryNotifier(this._getCatPhotosUseCase, this._refreshGalleryUseCase) : super(const AsyncValue.loading()) {
+    _init();
+  }
+
+  Future<void> _init() async {
+    state = const AsyncValue.loading();
+    try {
+      final photos = await _getCatPhotosUseCase();
+      state = AsyncValue.data(photos);
+    } catch (e, s) {
+      state = AsyncValue.error(e, s);
+    }
+  }
+
+  Future<void> refreshPhotos() async {
+    state = const AsyncValue.loading();
+    try {
+      await _refreshGalleryUseCase();
+      final photos = await _getCatPhotosUseCase();
+      state = AsyncValue.data(photos);
+    } catch (e, s) {
+      state = AsyncValue.error(e, s);
+    }
+  }
+
+  void toggleFavorite(String id) {
+    // This will be implemented later
+  }
+}

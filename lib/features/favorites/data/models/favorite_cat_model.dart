@@ -6,29 +6,23 @@ part 'favorite_cat_model.g.dart';
 
 @HiveType(typeId: 0)
 @JsonSerializable()
-class FavoriteCatModel extends FavoriteCat {
+class FavoriteCatModel {
   @HiveField(0)
-  @override
   final String id;
 
   @HiveField(1)
-  @override
   final String catPhotoId;
 
-  @override
   @HiveField(2)
   final String name;
 
   @HiveField(3)
-  @override
   final String imagePath;
 
   @HiveField(4)
-  @override
   final DateTime dateAdded;
 
   @HiveField(5)
-  @override
   final String? notes;
 
   const FavoriteCatModel({
@@ -38,14 +32,7 @@ class FavoriteCatModel extends FavoriteCat {
     required this.imagePath,
     required this.dateAdded,
     this.notes,
-  }) : super(
-         id: id,
-         catPhotoId: catPhotoId,
-         name: name,
-         imagePath: imagePath,
-         dateAdded: dateAdded,
-         notes: notes,
-       );
+  });
 
   factory FavoriteCatModel.fromJson(Map<String, dynamic> json) =>
       _$FavoriteCatModelFromJson(json);

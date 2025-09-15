@@ -12,4 +12,11 @@ abstract class ShareRepository {
     String? text,
     String? subject,
   });
+
+  /// Share a single photo with metadata
+  Future<void> sharePhotoWithMetadata({
+    required String photoPath,
+    required double confidence,
+    String? additionalText,
+  });
 }

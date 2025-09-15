@@ -1,7 +1,7 @@
 import 'package:cat_aloge/features/gallery/presentation/views/my_cat_screen.dart';
 import 'package:go_router/go_router.dart';
 
-final GoRouter _router = GoRouter(
+final appRouter = GoRouter(
   initialLocation: '/',
   routes: <RouteBase>[
     GoRoute(

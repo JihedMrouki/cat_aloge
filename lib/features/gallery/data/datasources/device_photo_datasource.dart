@@ -1,18 +1,17 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:cat_aloge/core/utils/logger.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/detection_result.dart';
+import 'package:cat_aloge/features/gallery/domain/datasources/photo_datasource.dart';
+import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:photo_manager/photo_manager.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:cat_aloge/features/permissions/domain/usecases/check_photo_permission.dart';
 import 'package:cat_aloge/features/permissions/domain/usecases/request_photo_permission.dart';
-import 'package:cat_aloge/features/permissions/domain/entities/permission_state.dart';
 
-abstract class DevicePhotoDataSource {
-  Future<List<CatPhoto>> getCatPhotos();
+abstract class DevicePhotoDataSource extends PhotoDataSource {
   Future<void> refreshPhotos();
   Future<void> clearCache();
   void dispose();
@@ -22,7 +21,8 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
   final CheckPhotoPermissionUseCase _checkPhotoPermissionUseCase;
   final RequestPhotoPermissionUseCase _requestPhotoPermissionUseCase;
   Interpreter? _interpreter;
-  final bool _isModelLoaded = false;
+  List<String>? _labels;
+  bool _isModelLoaded = false;
   final List<CatPhoto> _cachedCatPhotos = [];
   bool _isScanning = false;
 
@@ -86,11 +86,10 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
     AppLogger.info('Device photo data source disposed');
   }
 
-  Future<DetectionResult> _detectCatInPhoto(File imageFile) async {
-    final stopwatch = Stopwatch()..start();
+  Future<DetectionResult?> _detectCatInPhoto(File imageFile) async {
     try {
       if (!_isModelLoaded || _interpreter == null) {
-        return await _heuristicDetection(imageFile.path, stopwatch);
+        return null;
       }
 
       final Uint8List imageBytes = await imageFile.readAsBytes();
@@ -98,19 +97,14 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
 
       if (image == null) throw Exception('Could not decode image.');
 
-      return await _mlDetection(image, stopwatch);
+      return await _mlDetection(image);
     } catch (e, stackTrace) {
       AppLogger.error(
         'Error detecting cat in photo: ${imageFile.path}',
         e,
         stackTrace,
       );
-      return DetectionResult(
-        hasCat: false,
-        confidence: 0.0,
-        boundingBoxes: [],
-        processingTimeMs: stopwatch.elapsedMilliseconds,
-      );
+      return null;
     }
   }
 
@@ -119,10 +113,9 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
     AppLogger.info('Starting device scan for cat photos...');
 
     try {
-      final permissionState = await _checkPhotoPermissionUseCase();
-      if (permissionState.status == PhotoPermissionStatus.denied ||
-          permissionState.status == PhotoPermissionStatus.permanentlyDenied) {
-        final requestedPermissionState = await _requestPhotoPermissionUseCase();
+      final permissionState = await _checkPhotoPermissionUseCase.call();
+      if (!permissionState.isGranted) {
+        final requestedPermissionState = await _requestPhotoPermissionUseCase.call();
         if (!requestedPermissionState.isGranted) {
           throw Exception('Photo permission not granted');
         }
@@ -167,16 +160,13 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
       if (file == null) continue;
 
       final detectionResult = await _detectCatInPhoto(file);
-      if (detectionResult.hasCat) {
+      if (detectionResult != null) {
         batchCatPhotos.add(
           CatPhoto(
             id: asset.id,
             path: file.path,
             fileName: asset.title ?? 'Unknown',
-            dateAdded: asset.createDateTime,
-            sizeBytes: await file.length(),
-            width: asset.width,
-            height: asset.height,
+            isFavorite: false,
             detectionResult: detectionResult,
           ),
         );
@@ -186,26 +176,38 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
   }
 
   Future<void> _ensureModelLoaded() async {
-    // TODO: implement _ensureModelLoaded
+    if (_isModelLoaded) return;
+    try {
+      _interpreter = await Interpreter.fromAsset('assets/local_ml_model/detect.tflite');
+      final labelsData = await rootBundle.loadString('assets/local_ml_model/labelmap.txt');
+      _labels = labelsData.split('\n');
+      _isModelLoaded = true;
+    } catch (e) {
+      AppLogger.error('Failed to load model', e);
+    }
   }
 
-  Future<DetectionResult> _heuristicDetection(
-      String path, Stopwatch stopwatch) async {
-    // TODO: implement _heuristicDetection
-    return DetectionResult(
-        hasCat: false,
-        confidence: 0.0,
-        boundingBoxes: [],
-        processingTimeMs: stopwatch.elapsedMilliseconds);
-  }
+  Future<DetectionResult?> _mlDetection(img.Image image) async {
+    if (_interpreter == null || _labels == null) return null;
 
-  Future<DetectionResult> _mlDetection(
-      img.Image image, Stopwatch stopwatch) async {
-    // TODO: implement _mlDetection
-    return DetectionResult(
-        hasCat: false,
-        confidence: 0.0,
-        boundingBoxes: [],
-        processingTimeMs: stopwatch.elapsedMilliseconds);
+    final resizedImage = img.copyResize(image, width: 300, height: 300);
+    final imageBytes = resizedImage.getBytes();
+    final input = imageBytes.reshape([1, 300, 300, 3]);
+    final output = List.filled(1 * 10 * 4, 0.0).reshape([1, 10, 4]);
+
+    _interpreter!.run(input, output);
+
+    for (int i = 0; i < output[0].length; i++) {
+      if (output[0][i][1] > 0.5) {
+        final classIndex = output[0][i][0].toInt();
+        if (classIndex >= 0 && classIndex < _labels!.length) {
+          final label = _labels![classIndex];
+          if (label == 'cat') {
+            return DetectionResult(confidence: output[0][i][1], label: label);
+          }
+        }
+      }
+    }
+    return null;
   }
 }

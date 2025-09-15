@@ -11,8 +11,9 @@ class GalleryNotifier extends AsyncNotifier<List<CatPhoto>> {
 
   Future<void> refreshPhotos() async {
     state = const AsyncValue.loading();
+    await ref.read(refreshGalleryUsecaseProvider)();
     state = await AsyncValue.guard(() {
-      return ref.read(refreshGalleryUsecaseProvider)();
+      return ref.watch(getCatPhotosUsecaseProvider)();
     });
   }
 

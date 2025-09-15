@@ -164,7 +164,7 @@ class _PermissionRequestView extends StatelessWidget {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withAlpha(26),
               borderRadius: BorderRadius.circular(60),
             ),
             child: const Icon(Icons.pets, size: 64, color: AppColors.primary),
@@ -225,7 +225,7 @@ class _PermissionRequestView extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.secondary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.secondary.withAlpha(51)),
       ),
       child: Column(
         children: [

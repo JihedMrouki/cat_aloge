@@ -1,5 +1,4 @@
 import 'package:cat_aloge/core/utils/logger.dart';
-import 'package:cat_aloge/features/settings/data/datasources/hive_settings.dart';
 import 'package:cat_aloge/features/settings/data/datasources/local_settings_datasource.dart';
 import 'package:cat_aloge/features/settings/domain/entities/app_settings.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

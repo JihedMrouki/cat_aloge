@@ -1,11 +1,10 @@
 import 'package:cat_aloge/features/favorites/data/datasources/local_favorites_datasource.dart';
 import 'package:cat_aloge/features/favorites/domain/repositories/favorites_repository.dart';
+import 'package:cat_aloge/features/gallery/data/datasources/device_photo_datasource.dart';
+import 'package:cat_aloge/features/gallery/domain/datasources/photo_datasource.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
+import 'package:cat_aloge/features/permissions/presentation/providers/permission_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-abstract class PhotoDataSource {
-  Future<List<CatPhoto>> getPhotos();
-}
 
 class FavoritesRepositoryImpl implements FavoritesRepository {
   final FavoritesDataSource _favoritesDataSource;
@@ -18,7 +17,7 @@ class FavoritesRepositoryImpl implements FavoritesRepository {
 
   @override
   Future<List<CatPhoto>> getFavoritePhotos() async {
-    final allPhotos = await _photoDataSource.getPhotos();
+    final allPhotos = await _photoDataSource.getCatPhotos();
     final favoriteIds = await _favoritesDataSource.getFavoriteIds();
     final favoriteIdsSet = Set<String>.from(favoriteIds);
 
@@ -74,6 +73,7 @@ final favoritesDataSourceProvider = Provider<FavoritesDataSource>((ref) {
 });
 
 final photoDataSourceProvider = Provider<PhotoDataSource>((ref) {
-  // This should be implemented in the gallery feature
-  throw UnimplementedError();
+  final checkPhotoPermissionUseCase = ref.watch(checkPhotoPermissionUseCaseProvider);
+  final requestPhotoPermissionUseCase = ref.watch(requestPhotoPermissionUseCaseProvider);
+  return DevicePhotoDataSourceImpl(checkPhotoPermissionUseCase, requestPhotoPermissionUseCase);
 });

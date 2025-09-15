@@ -46,15 +46,15 @@ class CatGridItem extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.primary.withOpacity(0.1),
-            AppColors.secondary.withOpacity(0.1),
+            AppColors.primary.withAlpha(26),
+            AppColors.secondary.withAlpha(26),
           ],
         ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.pets, size: 40, color: AppColors.primary.withOpacity(0.6)),
+          Icon(Icons.pets, size: 40, color: AppColors.primary.withAlpha(153)),
           const SizedBox(height: AppConstants.spacingSM),
           Text('🐱', style: context.textTheme.headlineLarge),
         ],
@@ -79,7 +79,7 @@ class CatGridItem extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(AppConstants.spacingXS),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.5),
+            color: Colors.black.withAlpha(128),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Icon(

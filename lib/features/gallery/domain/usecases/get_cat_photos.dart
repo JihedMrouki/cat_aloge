@@ -1,10 +1,10 @@
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
-import 'package:cat_aloge/features/gallery/domain/repository/gallery_repository.dart';
+import 'package:cat_aloge/features/gallery/domain/repositories/gallery_repository.dart';
 
-class GetCatPhotos {
+class GetCatPhotosUseCase {
   final GalleryRepository _repository;
 
-  const GetCatPhotos(this._repository);
+  GetCatPhotosUseCase(this._repository);
 
   Future<List<CatPhoto>> call() async {
     return await _repository.getCatPhotos();

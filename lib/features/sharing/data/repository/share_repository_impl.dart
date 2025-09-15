@@ -35,6 +35,8 @@ class ShareRepositoryImpl implements ShareRepository {
         ? '$additionalText\n\n$metadata'
         : 'Check out this cat photo!\n\n$metadata';
 
-    await _shareDataSource.shareText(fullText, subject: 'Cat Photo');
+    await _shareDataSource.shareFile(photoPath, text: fullText, subject: 'Cat Photo');
   }
 }
+
+    

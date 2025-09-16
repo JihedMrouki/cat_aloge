@@ -29,7 +29,7 @@ class PhotoPermissionScreen extends ConsumerWidget {
             if (permissionState.isGranted) {
               // Permission granted - navigate to main gallery
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                context.go('/gallery');
+                context.go('/gallery?isFirstScan=true');
               });
               return const _PermissionGrantedView();
             }
@@ -186,6 +186,16 @@ class _PermissionRequestView extends StatelessWidget {
             permissionState.message,
             style: AppTextStyles.captionText.copyWith(
               color: AppColors.gray900,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 8),
+          Text(
+            '(You may be asked to select specific photos or allow access to your entire library.)',
+            style: AppTextStyles.captionText.copyWith(
+              color: AppColors.gray500,
+              fontSize: 12,
             ),
             textAlign: TextAlign.center,
           ),

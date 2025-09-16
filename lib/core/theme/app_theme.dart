@@ -11,7 +11,7 @@ class AppTheme {
         brightness: Brightness.light,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      fontFamily: 'Nunito',
+      // fontFamily: 'Nunito',
       textTheme: AppTextStyles.textTheme,
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

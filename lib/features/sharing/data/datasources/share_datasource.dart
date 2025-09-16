@@ -13,7 +13,7 @@ abstract class ShareDataSource {
 class SharePlusDataSource implements ShareDataSource {
   @override
   Future<void> shareText(String text, {String? subject}) async {
-    await Share.share(text, subject: subject);
+    await Share.share(text, subject: subject); // Reverted
   }
 
   @override
@@ -22,7 +22,7 @@ class SharePlusDataSource implements ShareDataSource {
     String? text,
     String? subject,
   }) async {
-    await Share.shareXFiles([XFile(filePath)], text: text, subject: subject);
+    await Share.shareXFiles([XFile(filePath)], text: text, subject: subject); // Reverted
   }
 
   @override
@@ -32,6 +32,6 @@ class SharePlusDataSource implements ShareDataSource {
     String? subject,
   }) async {
     final xFiles = filePaths.map((path) => XFile(path)).toList();
-    await Share.shareXFiles(xFiles, text: text, subject: subject);
+    await Share.shareXFiles(xFiles, text: text, subject: subject); // Reverted
   }
 }

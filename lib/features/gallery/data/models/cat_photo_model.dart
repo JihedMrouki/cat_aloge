@@ -9,6 +9,8 @@ class CatPhotoModel extends CatPhoto {
     required super.fileName,
     required super.isFavorite,
     super.detectionResult,
+    required super.creationDate,
+    required super.fileSize,
   });
 
   factory CatPhotoModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,8 @@ class CatPhotoModel extends CatPhoto {
       detectionResult: detectionResultJson != null
           ? DetectionResultModel.fromJson(detectionResultJson)
           : null,
+      creationDate: DateTime.parse(json['creationDate'] as String),
+      fileSize: json['fileSize'] as int,
     );
   }
 
@@ -33,6 +37,8 @@ class CatPhotoModel extends CatPhoto {
       'fileName': fileName,
       'isFavorite': isFavorite,
       'detectionResult': detectionResult != null ? DetectionResultModel(confidence: detectionResult!.confidence, label: detectionResult!.label).toJson() : null,
+      'creationDate': creationDate.toIso8601String(),
+      'fileSize': fileSize,
     };
   }
 
@@ -43,9 +49,12 @@ class CatPhotoModel extends CatPhoto {
       fileName: entity.fileName,
       isFavorite: entity.isFavorite,
       detectionResult: entity.detectionResult,
+      creationDate: entity.creationDate,
+      fileSize: entity.fileSize,
     );
   }
 
+  @override
   CatPhoto toEntity() {
     return CatPhoto(
       id: id,
@@ -53,16 +62,20 @@ class CatPhotoModel extends CatPhoto {
       fileName: fileName,
       isFavorite: isFavorite,
       detectionResult: detectionResult,
+      creationDate: creationDate,
+      fileSize: fileSize,
     );
   }
 
   @override
-  CatPhotoModel copyWith({
+  CatPhoto copyWith({
     String? id,
     String? path,
     String? fileName,
     bool? isFavorite,
     DetectionResult? detectionResult,
+    DateTime? creationDate,
+    int? fileSize,
   }) {
     return CatPhotoModel(
       id: id ?? this.id,
@@ -70,6 +83,8 @@ class CatPhotoModel extends CatPhoto {
       fileName: fileName ?? this.fileName,
       isFavorite: isFavorite ?? this.isFavorite,
       detectionResult: detectionResult ?? this.detectionResult,
+      creationDate: creationDate ?? this.creationDate,
+      fileSize: fileSize ?? this.fileSize,
     );
   }
 }

@@ -1,5 +1,6 @@
-import 'package:cat_aloge/features/favorites/data/datasources/local_favorites_datasource.dart';
+import 'package:cat_aloge/features/favorites/data/datasources/hive_favorites_datasource.dart';
 import 'package:cat_aloge/features/favorites/domain/repositories/favorites_repository.dart';
+import 'package:cat_aloge/features/favorites/domain/usecases/toggle_favorite.dart';
 import 'package:cat_aloge/features/gallery/data/datasources/device_photo_datasource.dart';
 import 'package:cat_aloge/features/gallery/domain/datasources/photo_datasource.dart';
 import 'package:cat_aloge/features/gallery/domain/entities/cat_photo.dart';
@@ -7,7 +8,7 @@ import 'package:cat_aloge/features/permissions/presentation/providers/permission
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class FavoritesRepositoryImpl implements FavoritesRepository {
-  final FavoritesDataSource _favoritesDataSource;
+  final HiveFavoritesDataSource _favoritesDataSource;
   final PhotoDataSource _photoDataSource;
 
   const FavoritesRepositoryImpl(
@@ -44,15 +45,8 @@ class FavoritesRepositoryImpl implements FavoritesRepository {
 
   @override
   Future<bool> toggleFavorite(String photoId) async {
-    final currentlyFavorite = await _favoritesDataSource.isFavorite(photoId);
-
-    if (currentlyFavorite) {
-      await _favoritesDataSource.removeFavorite(photoId);
-      return false;
-    } else {
-      await _favoritesDataSource.addFavorite(photoId);
-      return true;
-    }
+    // The Hive data source already has a toggle method
+    return await _favoritesDataSource.toggleFavorite(photoId);
   }
 
   @override
@@ -68,12 +62,17 @@ final favoritesRepositoryProvider = Provider<FavoritesRepository>((ref) {
   return FavoritesRepositoryImpl(favoritesDataSource, photoDataSource);
 });
 
-final favoritesDataSourceProvider = Provider<FavoritesDataSource>((ref) {
-  return LocalFavoritesDataSource();
+final favoritesDataSourceProvider = Provider<HiveFavoritesDataSource>((ref) {
+  return HiveFavoritesDataSource();
 });
 
 final photoDataSourceProvider = Provider<PhotoDataSource>((ref) {
   final checkPhotoPermissionUseCase = ref.watch(checkPhotoPermissionUseCaseProvider);
   final requestPhotoPermissionUseCase = ref.watch(requestPhotoPermissionUseCaseProvider);
   return DevicePhotoDataSourceImpl(checkPhotoPermissionUseCase, requestPhotoPermissionUseCase);
+});
+
+final toggleFavoriteUseCaseProvider = Provider<ToggleFavoriteUseCase>((ref) {
+  final repository = ref.watch(favoritesRepositoryProvider);
+  return ToggleFavoriteUseCase(repository);
 });

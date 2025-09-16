@@ -6,6 +6,8 @@ import 'package:cat_aloge/features/gallery/domain/usecases/get_cat_photos.dart';
 import 'package:cat_aloge/features/gallery/domain/usecases/refresh_gallery.dart';
 import 'package:cat_aloge/features/permissions/presentation/providers/permission_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cat_aloge/features/favorites/data/repository/faorites_repository_impl.dart';
+import 'package:cat_aloge/features/favorites/domain/usecases/toggle_favorite.dart';
 
 final photoDataSourceProvider = Provider<DevicePhotoDataSource>((ref) {
   final checkPhotoPermissionUseCase = ref.watch(checkPhotoPermissionUseCaseProvider);
@@ -32,14 +34,24 @@ final photoCountProvider = Provider<int>((ref) {
 });
 
 final galleryProvider = StateNotifierProvider<GalleryNotifier, AsyncValue<List<CatPhoto>>>((ref) {
-  return GalleryNotifier(ref.read(getCatPhotosUsecaseProvider), ref.read(refreshGalleryUsecaseProvider));
+  final toggleFavoriteUseCase = ref.watch(toggleFavoriteUseCaseProvider);
+  return GalleryNotifier(
+    ref.read(getCatPhotosUsecaseProvider),
+    ref.read(refreshGalleryUsecaseProvider),
+    toggleFavoriteUseCase,
+  );
 });
 
 class GalleryNotifier extends StateNotifier<AsyncValue<List<CatPhoto>>> {
   final GetCatPhotosUseCase _getCatPhotosUseCase;
   final RefreshGalleryUseCase _refreshGalleryUseCase;
+  final ToggleFavoriteUseCase _toggleFavoriteUseCase;
 
-  GalleryNotifier(this._getCatPhotosUseCase, this._refreshGalleryUseCase) : super(const AsyncValue.loading()) {
+  GalleryNotifier(
+    this._getCatPhotosUseCase,
+    this._refreshGalleryUseCase,
+    this._toggleFavoriteUseCase,
+  ) : super(const AsyncValue.loading()) {
     _init();
   }
 
@@ -64,7 +76,18 @@ class GalleryNotifier extends StateNotifier<AsyncValue<List<CatPhoto>>> {
     }
   }
 
-  void toggleFavorite(String id) {
-    // This will be implemented later
+  Future<void> toggleFavorite(String id) async {
+    // Persist the change
+    await _toggleFavoriteUseCase(id);
+
+    // Update the UI optimistically
+    final currentPhotos = state.valueOrNull ?? [];
+    final updatedPhotos = currentPhotos.map((photo) {
+      if (photo.id == id) {
+        return photo.copyWith(isFavorite: !photo.isFavorite);
+      }
+      return photo;
+    }).toList();
+    state = AsyncValue.data(updatedPhotos);
   }
 }

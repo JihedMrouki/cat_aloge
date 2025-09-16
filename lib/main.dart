@@ -1,6 +1,11 @@
 import 'package:cat_aloge/core/constants/hive_boxes.dart';
+import 'package:cat_aloge/features/favorites/presentation/views/favorites_screen.dart'; // New
 import 'package:cat_aloge/features/gallery/presentation/views/my_cat_screen.dart';
 import 'package:cat_aloge/features/gallery/presentation/views/photo_detail_screen.dart';
+import 'package:cat_aloge/features/onboarding/presentation/views/welcome_screen.dart';
+import 'package:cat_aloge/features/permissions/views/screens/photo_permission_screen.dart';
+import 'package:cat_aloge/features/onboarding/presentation/views/splash_screen.dart';
+import 'package:cat_aloge/features/shell/presentation/views/shell_screen.dart'; // New
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +19,8 @@ final appInitializationProvider = FutureProvider<void>((ref) async {
     // Step 2: Open essential Hive boxes needed by the app.
     await Hive.openBox(HiveBoxes.settings);
     await Hive.openBox(HiveBoxes.detectionStats);
+    await Hive.openBox(HiveBoxes.userPreferences);
+    await Hive.openBox(HiveBoxes.favorites);
 
     // Add any other async initialization tasks here.
   } catch (e) {
@@ -153,15 +160,44 @@ final GoRouter _router = GoRouter(
   routes: <RouteBase>[
     GoRoute(
       path: '/',
-      name: 'home',
-      builder: (BuildContext context, GoRouterState state) {
-        return const MyCatsScreen();
+      name: 'splash',
+      builder: (context, state) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: '/welcome',
+      name: 'welcome',
+      builder: (context, state) => const WelcomeScreen(),
+    ),
+    GoRoute(
+      path: '/permission',
+      name: 'permission',
+      builder: (context, state) => const PhotoPermissionScreen(),
+    ),
+    // New ShellRoute
+    ShellRoute(
+      builder: (context, state, child) {
+        return ShellScreen(child: child);
       },
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/gallery',
+          name: 'gallery',
+          builder: (context, state) {
+            final isFirstScan = state.uri.queryParameters['isFirstScan'];
+            return MyCatsScreen(isFirstScan: isFirstScan);
+          },
+        ),
+        GoRoute(
+          path: '/favorites',
+          name: 'favorites',
+          builder: (context, state) => const FavoritesScreen(),
+        ),
+      ],
     ),
     GoRoute(
       path: '/photo/:photoId',
       name: 'photo-detail',
-      builder: (BuildContext context, GoRouterState state) {
+      builder: (context, state) {
         final photoId = state.pathParameters['photoId']!;
         return PhotoDetailScreen(photoId: photoId);
       },

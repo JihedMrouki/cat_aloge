@@ -168,6 +168,8 @@ class DevicePhotoDataSourceImpl implements DevicePhotoDataSource {
             fileName: asset.title ?? 'Unknown',
             isFavorite: false,
             detectionResult: detectionResult,
+            creationDate: asset.createDateTime, // Use asset.createDateTime
+            fileSize: (await asset.originBytes)?.length ?? 0, // Use asset.originBytes
           ),
         );
       }
